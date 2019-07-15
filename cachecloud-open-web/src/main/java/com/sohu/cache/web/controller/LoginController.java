@@ -4,6 +4,8 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.sohu.cache.web.core.Result;
+import com.sohu.cache.web.core.ResultGenerator;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,18 +35,6 @@ public class LoginController extends BaseController {
     private UserLoginStatusService userLoginStatusService;
 
     /**
-     * 用户登录界面
-     *
-     * @param request
-     * @return
-     */
-    @RequestMapping(value = "/login", method = RequestMethod.GET)
-    public ModelAndView init(HttpServletRequest request, HttpServletResponse response, Model model) {
-        model.addAttribute(ConstUtils.RREDIRECT_URL_PARAM, request.getParameter(ConstUtils.RREDIRECT_URL_PARAM));
-        return new ModelAndView("manage/login");
-    }
-
-    /**
      * 用户登录
      *
      * @param userName 用户名
@@ -53,8 +43,8 @@ public class LoginController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/loginIn", method = RequestMethod.POST)
-    public ModelAndView loginIn(HttpServletRequest request,
-                                HttpServletResponse response, Model model, String userName, String password, boolean isAdmin) {
+    public Result loginIn(HttpServletRequest request,
+                          HttpServletResponse response, Model model, String userName, String password, boolean isAdmin) {
         // 登录结果
         LoginResult loginResult = new LoginResult();
         loginResult.setAdminEnum((isAdmin == true ? AdminEnum.IS_ADMIN : AdminEnum.NOT_ADMIN));
@@ -94,19 +84,18 @@ public class LoginController extends BaseController {
         }
         model.addAttribute("success", loginResult.getLoginEnum().value());
         model.addAttribute("admin", loginResult.getAdminEnum().value());
-        return new ModelAndView();
+        return ResultGenerator.genSuccessResult(loginResult);
     }
 
     /**
      * 用户注销
      *
-     * @param reqeust
      * @return
      */
     @RequestMapping(value = "/logout", method = RequestMethod.GET)
-    public ModelAndView logout(HttpServletRequest request, HttpServletResponse response) {
+    public Result logout(HttpServletRequest request, HttpServletResponse response) {
         userLoginStatusService.removeLoginStatus(request, response);
-        return new ModelAndView("redirect:/manage/login");
+        return ResultGenerator.genSuccessResult();
     }
 
 }
