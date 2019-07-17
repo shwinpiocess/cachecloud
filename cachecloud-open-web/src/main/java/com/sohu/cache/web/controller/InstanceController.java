@@ -6,6 +6,8 @@ import com.sohu.cache.redis.RedisCenter;
 import com.sohu.cache.stats.app.AppStatsCenter;
 import com.sohu.cache.stats.instance.InstanceStatsCenter;
 import com.sohu.cache.util.ConstUtils;
+import com.sohu.cache.web.core.Result;
+import com.sohu.cache.web.core.ResultGenerator;
 import com.sohu.cache.web.vo.RedisSlowLog;
 import com.sohu.cache.web.chart.key.ChartKeysUtil;
 import com.sohu.cache.web.chart.model.SplineChartEntity;
@@ -47,8 +49,8 @@ public class InstanceController {
     private InstanceAlertService instanceAlertService;
 
     @RequestMapping("/index")
-    public ModelAndView index(HttpServletRequest request, HttpServletResponse response, Model model, Integer admin, Long instanceId, Long appId, String tabTag) {
-
+    public Result index(HttpServletRequest request, HttpServletResponse response, Model model, Integer admin, Long instanceId, Long appId, String tabTag) {
+        HashMap<String, Object> data = new HashMap<>(0);
         String startDateParam = request.getParameter("startDate");
         String endDateParam = request.getParameter("endDate");
 
@@ -58,35 +60,35 @@ public class InstanceController {
             startDateParam = DateUtil.formatDate(startDate, "yyyyMMdd");
             endDateParam = DateUtil.formatDate(endDate, "yyyyMMdd");
         }
-        model.addAttribute("startDate", startDateParam);
-        model.addAttribute("endDate", endDateParam);
+        data.put("startDate", startDateParam);
+        data.put("endDate", endDateParam);
 
         if (instanceId != null && instanceId > 0) {
-            model.addAttribute("instanceId", instanceId);
+            data.put("instanceId", instanceId);
             InstanceInfo instanceInfo = instanceStatsCenter.getInstanceInfo(instanceId);
 
             if (instanceInfo == null) {
-                model.addAttribute("type", -1);
+                data.put("type", -1);
             } else {
                 if (appId != null && appId > 0) {
-                    model.addAttribute("appId", appId);
+                    data.put("appId", appId);
                 } else {
-                    model.addAttribute("appId", instanceInfo.getAppId());
+                    data.put("appId", instanceInfo.getAppId());
                 }
-                model.addAttribute("type", instanceInfo.getType());
+                data.put("type", instanceInfo.getType());
             }
         } else {
 
         }
         if (tabTag != null) {
-            model.addAttribute("tabTag", tabTag);
+            data.put("tabTag", tabTag);
         }
-        return new ModelAndView("instance/instanceIndex");
+        return ResultGenerator.genSuccessResult(data);
     }
 
     @RequestMapping("/stat")
-    public ModelAndView stat(HttpServletRequest request, HttpServletResponse response, Model model, Integer admin, Long instanceId) {
-
+    public Result stat(HttpServletRequest request, HttpServletResponse response, Model model, Integer admin, Long instanceId) {
+        HashMap<String, Object> data = new HashMap<>(0);
         String startDateParam = request.getParameter("startDate");
         String endDateParam = request.getParameter("endDate");
 
@@ -96,26 +98,26 @@ public class InstanceController {
             startDateParam = DateUtil.formatDate(startDate, "yyyyMMdd");
             endDateParam = DateUtil.formatDate(endDate, "yyyyMMdd");
         }
-        model.addAttribute("startDate", startDateParam);
-        model.addAttribute("endDate", endDateParam);
+        data.put("startDate", startDateParam);
+        data.put("endDate", endDateParam);
 
         if (instanceId != null && instanceId > 0) {
-            model.addAttribute("instanceId", instanceId);
+            data.put("instanceId", instanceId);
             InstanceInfo instanceInfo = instanceStatsCenter.getInstanceInfo(instanceId);
-            model.addAttribute("instanceInfo", instanceInfo);
-            model.addAttribute("appId", instanceInfo.getAppId());
-            model.addAttribute("appDetail", appStatsCenter.getAppDetail(instanceInfo.getAppId()));
+            data.put("instanceInfo", instanceInfo);
+            data.put("appId", instanceInfo.getAppId());
+            data.put("appDetail", appStatsCenter.getAppDetail(instanceInfo.getAppId()));
             InstanceStats instanceStats = instanceStatsCenter.getInstanceStats(instanceId);
-            model.addAttribute("instanceStats", instanceStats);
+            data.put("instanceStats", instanceStats);
             List<AppCommandStats> topLimitAppCommandStatsList = appStatsCenter.getTopLimitAppCommandStatsList(instanceInfo.getAppId(), Long.parseLong(startDateParam) * 10000, Long.parseLong(endDateParam) * 10000, 5);
-            model.addAttribute("appCommandStats", topLimitAppCommandStatsList);
+            data.put("appCommandStats", topLimitAppCommandStatsList);
         }
-        return new ModelAndView("instance/instanceStat");
+        return ResultGenerator.genSuccessResult(data);
     }
 
     @RequestMapping("/advancedAnalysis")
-    public ModelAndView advancedAnalysis(HttpServletRequest request, HttpServletResponse response, Model model, Integer admin, Long instanceId) {
-
+    public Result advancedAnalysis(HttpServletRequest request, HttpServletResponse response, Model model, Integer admin, Long instanceId) {
+        HashMap<String, Object> data = new HashMap<>(0);
         String startDateParam = request.getParameter("startDate");
         String endDateParam = request.getParameter("endDate");
 
@@ -125,20 +127,20 @@ public class InstanceController {
             startDateParam = DateUtil.formatDate(startDate, "yyyyMMdd");
             endDateParam = DateUtil.formatDate(endDate, "yyyyMMdd");
         }
-        model.addAttribute("startDate", startDateParam);
-        model.addAttribute("endDate", endDateParam);
+        data.put("startDate", startDateParam);
+        data.put("endDate", endDateParam);
 
         if (instanceId != null && instanceId > 0) {
-            model.addAttribute("instanceId", instanceId);
+            data.put("instanceId", instanceId);
             InstanceInfo instanceInfo = instanceStatsCenter.getInstanceInfo(instanceId);
-            model.addAttribute("instanceInfo", instanceInfo);
-            model.addAttribute("appId", instanceInfo.getAppId());
+            data.put("instanceInfo", instanceInfo);
+            data.put("appId", instanceInfo.getAppId());
             List<AppCommandStats> topLimitAppCommandStatsList = appStatsCenter.getTopLimitAppCommandStatsList(instanceInfo.getAppId(), Long.parseLong(startDateParam) * 10000, Long.parseLong(endDateParam) * 10000, 5);
-            model.addAttribute("appCommandStats", topLimitAppCommandStatsList);
+            data.put("appCommandStats", topLimitAppCommandStatsList);
         } else {
 
         }
-        return new ModelAndView("instance/instanceAdvancedAnalysis");
+        return ResultGenerator.genSuccessResult(data);
     }
 
     /**
@@ -149,9 +151,10 @@ public class InstanceController {
      * @throws java.text.ParseException
      */
     @RequestMapping("/getCommandStats")
-    public ModelAndView getCommandStats(HttpServletRequest request,
+    public Result getCommandStats(HttpServletRequest request,
                                         HttpServletResponse response, Model model, Long instanceId,
                                         String commandName) throws ParseException {
+        HashMap<String, Object> data = new HashMap<>(0);
         String startDateParam = request.getParameter("startDate");
         String endDateParam = request.getParameter("endDate");
 
@@ -161,8 +164,8 @@ public class InstanceController {
             startDateParam = DateUtil.formatDate(startDate, "yyyyMMdd");
             endDateParam = DateUtil.formatDate(endDate, "yyyyMMdd");
         }
-        model.addAttribute("startDate", startDateParam);
-        model.addAttribute("endDate", endDateParam);
+        data.put("startDate", startDateParam);
+        data.put("endDate", endDateParam);
 
         Date startDate = DateUtil.parseYYYYMMdd(startDateParam);
         Date endDate = DateUtil.parseYYYYMMdd(endDateParam);
@@ -192,7 +195,7 @@ public class InstanceController {
             if (container != null) {
                 splineChartEntity.renderTo(container);
             }
-            model.addAttribute("chart", splineChartEntity);
+            data.put("chart", splineChartEntity);
             splineChartEntity.putTitle(ChartKeysUtil.TitleKey.TEXT.getKey(), "命令:" + commandName + " 的比较曲线【" + startDateParam + "】-【" + endDateParam + "】");
             splineChartEntity.setYAxisTitle("y");
             List<Long> data1 = new ArrayList<Long>();
@@ -226,7 +229,7 @@ public class InstanceController {
             }
             splineChartEntity.setXAxisCategories(x);
         }
-        return new ModelAndView("");
+        return ResultGenerator.genSuccessResult(data);
     }
 
     /**
@@ -237,9 +240,10 @@ public class InstanceController {
      * @throws java.text.ParseException
      */
     @RequestMapping("/getCommandStatsV2")
-    public ModelAndView getCommandStatsV2(HttpServletRequest request,
+    public Result getCommandStatsV2(HttpServletRequest request,
                                           HttpServletResponse response, Model model, Long instanceId,
                                           String commandName) throws ParseException {
+        HashMap<String, Object> data = new HashMap<>(0);
         String startDateParam = request.getParameter("startDate");
         String endDateParam = request.getParameter("endDate");
 
@@ -249,8 +253,8 @@ public class InstanceController {
             startDateParam = DateUtil.formatDate(startDate, "yyyyMMdd");
             endDateParam = DateUtil.formatDate(endDate, "yyyyMMdd");
         }
-        model.addAttribute("startDate", startDateParam);
-        model.addAttribute("endDate", endDateParam);
+        data.put("startDate", startDateParam);
+        data.put("endDate", endDateParam);
 
         Date startDate = DateUtil.parseYYYYMMdd(startDateParam);
         Date endDate = DateUtil.parseYYYYMMdd(endDateParam);
@@ -280,7 +284,7 @@ public class InstanceController {
             if (container != null) {
                 splineChartEntity.renderTo(container);
             }
-            model.addAttribute("chart", splineChartEntity);
+            data.put("chart", splineChartEntity);
             splineChartEntity.putTitle(ChartKeysUtil.TitleKey.TEXT.getKey(), "命令:" + commandName + " 的比较曲线【" + startDateParam + "】-【" + endDateParam + "】");
             splineChartEntity.setYAxisTitle("y");
             List<Long> data1 = new ArrayList<Long>();
@@ -316,11 +320,12 @@ public class InstanceController {
             }
             splineChartEntity.setXAxisCategories(x);
         }
-        return new ModelAndView("");
+        return ResultGenerator.genSuccessResult(data);
     }
 
     @RequestMapping("/fault")
-    public ModelAndView fault(HttpServletRequest request, HttpServletResponse response, Model model, Integer admin, Integer instanceId, Long appId) {
+    public Result fault(HttpServletRequest request, HttpServletResponse response, Model model, Integer admin, Integer instanceId, Long appId) {
+        HashMap<String, Object> data = new HashMap<>(0);
         //String startDateParam = request.getParameter("startDate");
         //String endDateParam = request.getParameter("endDate");
         List<InstanceFault> list = null;
@@ -332,62 +337,67 @@ public class InstanceController {
         if (list == null) {
             list = new ArrayList<InstanceFault>();
         }
-        model.addAttribute("list", list);
-        return new ModelAndView("instance/instanceFault");
+        data.put("list", list);
+        return ResultGenerator.genSuccessResult(data);
     }
 
     @RequestMapping("/configSelect")
-    public ModelAndView configSelect(HttpServletRequest request, HttpServletResponse response, Model model, Integer admin, Long instanceId, Long appId) {
+    public Result configSelect(HttpServletRequest request, HttpServletResponse response, Model model, Integer admin, Long instanceId, Long appId) {
+        HashMap<String, Object> data = new HashMap<>(0);
         if (instanceId != null && instanceId > 0) {
-            model.addAttribute("instanceId", instanceId);
+            data.put("instanceId", instanceId);
             Map<String, String> redisConfigList = redisCenter.getRedisConfigList(instanceId.intValue());
-            model.addAttribute("redisConfigList", redisConfigList);
+            data.put("redisConfigList", redisConfigList);
         }
         if (appId != null && appId > 0) {
-            model.addAttribute("appId", appId);
+            data.put("appId", appId);
         }
-        return new ModelAndView("instance/instanceConfigSelect");
+        return ResultGenerator.genSuccessResult(data);
     }
 
     @RequestMapping("/slowSelect")
-    public ModelAndView slowSelect(HttpServletRequest request, HttpServletResponse response, Model model, Integer admin, Long instanceId) {
+    public Result slowSelect(HttpServletRequest request, HttpServletResponse response, Model model, Integer admin, Long instanceId) {
+        HashMap<String, Object> data = new HashMap<>(0);
         if (instanceId != null && instanceId > 0) {
-            model.addAttribute("instanceId", instanceId);
+            data.put("instanceId", instanceId);
             List<RedisSlowLog> redisSlowLogs = redisCenter.getRedisSlowLogs(instanceId.intValue(), -1);
-            model.addAttribute("redisSlowLogs", redisSlowLogs);
+            data.put("redisSlowLogs", redisSlowLogs);
         }
-        return new ModelAndView("instance/instanceSlowSelect");
+        return ResultGenerator.genSuccessResult(data);
     }
 
     @RequestMapping("/clientList")
-    public ModelAndView clientList(HttpServletRequest request, HttpServletResponse response, Model model, Integer admin, Long instanceId) {
+    public Result clientList(HttpServletRequest request, HttpServletResponse response, Model model, Integer admin, Long instanceId) {
+        HashMap<String, Object> data = new HashMap<>(0);
         if (instanceId != null && instanceId > 0) {
-            model.addAttribute("instanceId", instanceId);
+            data.put("instanceId", instanceId);
             List<String> clientList = redisCenter.getClientList(instanceId.intValue());
-            model.addAttribute("clientList", clientList);
+            data.put("clientList", clientList);
         }
-        return new ModelAndView("instance/instanceClientList");
+        return ResultGenerator.genSuccessResult(data);
     }
 
     @RequestMapping("/command")
-    public ModelAndView command(HttpServletRequest request, HttpServletResponse response, Model model, Integer admin, Long instanceId, Long appId) {
+    public Result command(HttpServletRequest request, HttpServletResponse response, Model model, Integer admin, Long instanceId, Long appId) {
+        HashMap<String, Object> data = new HashMap<>(0);
         if (instanceId != null && instanceId > 0) {
-            model.addAttribute("instanceId", instanceId);
+            data.put("instanceId", instanceId);
         }
-        return new ModelAndView("instance/instanceCommand");
+        return ResultGenerator.genSuccessResult(data);
     }
 
     @RequestMapping("/commandExecute")
-    public ModelAndView commandExecute(HttpServletRequest request, HttpServletResponse response, Model model, Integer admin, Long instanceId, Long appId) {
+    public Result commandExecute(HttpServletRequest request, HttpServletResponse response, Model model, Integer admin, Long instanceId, Long appId) {
+        HashMap<String, Object> data = new HashMap<>(0);
         if (instanceId != null && instanceId > 0) {
-            model.addAttribute("instanceId", instanceId);
+            data.put("instanceId", instanceId);
             String command = request.getParameter("command");
             String result = instanceStatsCenter.executeCommand(instanceId, command);
-            model.addAttribute("result", result);
+            data.put("result", result);
         } else {
-            model.addAttribute("result", "error");
+            data.put("result", "error");
         }
-        return new ModelAndView("instance/commandExecute");
+        return ResultGenerator.genSuccessResult(data);
     }
 
 }

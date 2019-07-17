@@ -10,6 +10,8 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.sohu.cache.web.core.Result;
+import com.sohu.cache.web.core.ResultGenerator;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.lang.time.DateUtils;
 import org.springframework.stereotype.Controller;
@@ -55,21 +57,22 @@ public class ClientManageController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/exception")
-    public ModelAndView doClientExceptionStat(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result doClientExceptionStat(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         String ip = request.getParameter("ip");
-        model.addAttribute("ip", ip);
+        data.put("ip", ip);
         //近一个月
         long collectTime = NumberUtils.toLong(new SimpleDateFormat("yyyyMMdd000000").format(DateUtils.addMonths(new Date(), -1)));
         
         // 一段时间内客户端异常
         List<ClientInstanceException> clientInstanceExceptionList = clientReportExceptionService.getInstanceExceptionStat(ip, collectTime);
-        model.addAttribute("clientInstanceExceptionList", clientInstanceExceptionList);
+        data.put("clientInstanceExceptionList", clientInstanceExceptionList);
         
         // 应用相关map
         fillAppInfoMap(model);
-        
-        model.addAttribute("clientExceptionActive", SuccessEnum.SUCCESS.value());
-        return new ModelAndView("manage/client/exception/list");
+
+        data.put("clientExceptionActive", SuccessEnum.SUCCESS.value());
+        return ResultGenerator.genSuccessResult(data);
     }
 
     private void fillAppInfoMap(Model model) {
@@ -98,17 +101,18 @@ public class ClientManageController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/version")
-    public ModelAndView doVersionStat(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result doVersionStat(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         long appId = NumberUtils.toLong(request.getParameter("appId"),-1);
         List<AppClientVersion> appClientVersionList =  clientVersionService.getAll(appId);
         
         // 应用相关map
         fillAppInfoMap(model);
         
-        model.addAttribute("appClientVersionList", appClientVersionList);
-        model.addAttribute("clientVersionActive", SuccessEnum.SUCCESS.value());
-        model.addAttribute("appId", request.getParameter("appId"));
+        data.put("appClientVersionList", appClientVersionList);
+        data.put("clientVersionActive", SuccessEnum.SUCCESS.value());
+        data.put("appId", request.getParameter("appId"));
         
-        return new ModelAndView("manage/client/version/list");
+        return ResultGenerator.genSuccessResult(data);
     }
 }

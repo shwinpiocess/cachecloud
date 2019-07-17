@@ -1,12 +1,15 @@
 package com.sohu.cache.web.controller;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.sohu.cache.web.core.Result;
+import com.sohu.cache.web.core.ResultGenerator;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
@@ -48,18 +51,19 @@ public class InstanceAlertValueController extends BaseController {
      * 初始化配置
      */
     @RequestMapping(value = "/init")
-    public ModelAndView init(HttpServletRequest request, HttpServletResponse response, Model model) {
-        model.addAttribute("instanceAlertCheckCycleEnumList", InstanceAlertCheckCycleEnum.getInstanceAlertCheckCycleEnumList());
-        model.addAttribute("instanceAlertCompareTypeEnumList", InstanceAlertCompareTypeEnum.getInstanceAlertCompareTypeEnumList());
-        model.addAttribute("redisAlertConfigEnumList", RedisAlertConfigEnum.getRedisAlertConfigEnumList());
-        model.addAttribute("instanceAlertAllList", instanceAlertConfigService.getByType(InstanceAlertTypeEnum.ALL_ALERT.getValue()));
-        model.addAttribute("instanceAlertList", instanceAlertConfigService.getAll());
-        model.addAttribute("success", request.getParameter("success"));
-        model.addAttribute("instanceAlertValueActive", SuccessEnum.SUCCESS.value());
+    public Result init(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
+        data.put("instanceAlertCheckCycleEnumList", InstanceAlertCheckCycleEnum.getInstanceAlertCheckCycleEnumList());
+        data.put("instanceAlertCompareTypeEnumList", InstanceAlertCompareTypeEnum.getInstanceAlertCompareTypeEnumList());
+        data.put("redisAlertConfigEnumList", RedisAlertConfigEnum.getRedisAlertConfigEnumList());
+        data.put("instanceAlertAllList", instanceAlertConfigService.getByType(InstanceAlertTypeEnum.ALL_ALERT.getValue()));
+        data.put("instanceAlertList", instanceAlertConfigService.getAll());
+        data.put("success", request.getParameter("success"));
+        data.put("instanceAlertValueActive", SuccessEnum.SUCCESS.value());
         List<InstanceAlertConfig> instanceAlertSpecialList = instanceAlertConfigService.getByType(InstanceAlertTypeEnum.INSTANCE_ALERT.getValue());
         fillinstanceHostPort(instanceAlertSpecialList);
-        model.addAttribute("instanceAlertSpecialList", instanceAlertSpecialList);
-        return new ModelAndView("manage/instanceAlert/init");
+        data.put("instanceAlertSpecialList", instanceAlertSpecialList);
+        return ResultGenerator.genSuccessResult(data);
     }
     
     /**
@@ -84,7 +88,8 @@ public class InstanceAlertValueController extends BaseController {
      * 添加配置
      */
     @RequestMapping(value = "/add")
-    public ModelAndView add(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result add(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         AppUser appUser = getUserInfo(request);
         InstanceAlertConfig instanceAlertConfig = getInstanceAlertConfig(request);
         SuccessEnum successEnum;
@@ -94,41 +99,42 @@ public class InstanceAlertValueController extends BaseController {
             successEnum = SuccessEnum.SUCCESS;
         } catch (Exception e) {
             successEnum = SuccessEnum.FAIL;
-            model.addAttribute("message", ErrorMessageEnum.INNER_ERROR_MSG.getMessage());
+            data.put("message", ErrorMessageEnum.INNER_ERROR_MSG.getMessage());
             logger.error(e.getMessage(), e);
         }
         logger.warn("user {} add instanceAlertConfig {}, result is {}", appUser.getName(),instanceAlertConfig,successEnum.value());
-        model.addAttribute("status", successEnum.value());
-        return new ModelAndView("");
+        data.put("status", successEnum.value());
+        return ResultGenerator.genSuccessResult(data);
     }
     
     /**
      * 检查hostPort是否存在
      */
     @RequestMapping(value = "/checkInstanceHostPort")
-    public ModelAndView checkInstanceHostPort(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result checkInstanceHostPort(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         String hostPort = request.getParameter("instanceHostPort");
         if (StringUtils.isBlank(hostPort)) {
-            model.addAttribute("status", SuccessEnum.FAIL.value());
-            model.addAttribute("message","参数为空");
-            return new ModelAndView("");
+            data.put("status", SuccessEnum.FAIL.value());
+            data.put("message","参数为空");
+            return ResultGenerator.genSuccessResult(data);
         }
         String[] hostPortArr = hostPort.split(":");
         if (hostPortArr.length != 2) {
-            model.addAttribute("status", SuccessEnum.FAIL.value());
-            model.addAttribute("message","hostPort:" + hostPort + "格式错误");
-            return new ModelAndView("");
+            data.put("status", SuccessEnum.FAIL.value());
+            data.put("message","hostPort:" + hostPort + "格式错误");
+            return ResultGenerator.genSuccessResult(data);
         }
         String host = hostPortArr[0];
         int port = NumberUtils.toInt(hostPortArr[1]);
         InstanceInfo instanceInfo = instanceDao.getAllInstByIpAndPort(host, port);
         if (instanceInfo == null) {
-            model.addAttribute("status", SuccessEnum.FAIL.value());
-            model.addAttribute("message","hostPort:" + hostPort + "不存在");
+            data.put("status", SuccessEnum.FAIL.value());
+            data.put("message","hostPort:" + hostPort + "不存在");
         } else {
-            model.addAttribute("status", SuccessEnum.SUCCESS.value());
+            data.put("status", SuccessEnum.SUCCESS.value());
         }
-        return new ModelAndView("");
+        return ResultGenerator.genSuccessResult(data);
     }
     
     /**
@@ -144,7 +150,8 @@ public class InstanceAlertValueController extends BaseController {
      * 修改配置
      */
     @RequestMapping(value = "/update")
-    public ModelAndView update(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result update(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         AppUser appUser = getUserInfo(request);
         int id = NumberUtils.toInt(request.getParameter("id"));
         String alertValue = request.getParameter("alertValue");
@@ -156,19 +163,20 @@ public class InstanceAlertValueController extends BaseController {
             successEnum = SuccessEnum.SUCCESS;
         } catch (Exception e) {
             successEnum = SuccessEnum.FAIL;
-            model.addAttribute("message", ErrorMessageEnum.INNER_ERROR_MSG.getMessage());
+            data.put("message", ErrorMessageEnum.INNER_ERROR_MSG.getMessage());
             logger.error(e.getMessage(), e);
         }
         logger.warn("user {} change instance alert id={}, alertValue={}, checkCycle={}, result is {}", appUser.getName(), alertValue, checkCycle, successEnum.info());
-        model.addAttribute("status", successEnum.value());
-        return new ModelAndView("");
+        data.put("status", successEnum.value());
+        return ResultGenerator.genSuccessResult(data);
     }
 
     /**
      * 删除配置
      */
     @RequestMapping(value = "/remove")
-    public ModelAndView remove(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result remove(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         AppUser appUser = getUserInfo(request);
         int id = NumberUtils.toInt(request.getParameter("id"));
         InstanceAlertConfig instanceAlertConfig = instanceAlertConfigService.get(id);
@@ -179,12 +187,12 @@ public class InstanceAlertValueController extends BaseController {
             successEnum = SuccessEnum.SUCCESS;
         } catch (Exception e) {
             successEnum = SuccessEnum.FAIL;
-            model.addAttribute("message", ErrorMessageEnum.INNER_ERROR_MSG.getMessage());
+            data.put("message", ErrorMessageEnum.INNER_ERROR_MSG.getMessage());
             logger.error(e.getMessage(), e);
         }
         logger.warn("user {} want to delete config id {}, instanceAlertConfig {}, result is {}", appUser.getName(), id, instanceAlertConfig, successEnum.info());
-        model.addAttribute("status", successEnum.value());
-        return new ModelAndView("");
+        data.put("status", successEnum.value());
+        return ResultGenerator.genSuccessResult(data);
 
     }
 

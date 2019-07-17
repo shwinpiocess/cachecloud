@@ -1,14 +1,13 @@
 package com.sohu.cache.web.controller;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.sohu.cache.web.core.Result;
+import com.sohu.cache.web.core.ResultGenerator;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.slf4j.Logger;
@@ -54,7 +53,8 @@ public class InstanceManageController extends BaseController {
      * @param instanceId
      */
     @RequestMapping(value = "/startInstance")
-    public ModelAndView doStartInstance(HttpServletRequest request, HttpServletResponse response, Model model, long appId, int instanceId) {
+    public Result doStartInstance(HttpServletRequest request, HttpServletResponse response, Model model, long appId, int instanceId) {
+        HashMap<String, Object> data = new HashMap<>(0);
         AppUser appUser = getUserInfo(request);
         logger.warn("user {} startInstance {} ", appUser.getName(), instanceId);
         boolean result = false;
@@ -63,29 +63,29 @@ public class InstanceManageController extends BaseController {
                 result = instanceDeployCenter.startExistInstance(appId, instanceId);
             } catch (Exception e) {
                 logger.error(e.getMessage(), e);
-                model.addAttribute("message", e.getMessage());
+                data.put("message", e.getMessage());
             }
         } else {
             logger.error("doStartInstance instanceId:{}", instanceId);
-            model.addAttribute("message", "wrong param");
+            data.put("message", "wrong param");
         }
         logger.warn("user {} startInstance {} result is {}", appUser.getName(), instanceId, result);
         if (result) {
-            model.addAttribute("success", SuccessEnum.SUCCESS.value());
+            data.put("success", SuccessEnum.SUCCESS.value());
         } else {
-            model.addAttribute("success", SuccessEnum.FAIL.value());
+            data.put("success", SuccessEnum.FAIL.value());
         }
-        return new ModelAndView();
+        return ResultGenerator.genSuccessResult(data);
     }
 
     /**
      * 下线实例
      * 
      * @param instanceId
-     * @param ip
      */
     @RequestMapping(value = "/shutdownInstance")
-    public ModelAndView doShutdownInstance(HttpServletRequest request, HttpServletResponse response, Model model, long appId, int instanceId) {
+    public Result doShutdownInstance(HttpServletRequest request, HttpServletResponse response, Model model, long appId, int instanceId) {
+        HashMap<String, Object> data = new HashMap<>(0);
         AppUser appUser = getUserInfo(request);
         logger.warn("user {} shutdownInstance {} ", appUser.getName(), instanceId);
         boolean result = false;
@@ -94,35 +94,34 @@ public class InstanceManageController extends BaseController {
                 result = instanceDeployCenter.shutdownExistInstance(appId, instanceId);
             } catch (Exception e) {
                 logger.error(e.getMessage(), e);
-                model.addAttribute("message", e.getMessage());
+                data.put("message", e.getMessage());
             }
         } else {
             logger.error("doShutdownInstance instanceId:{}", instanceId);
-            model.addAttribute("message", "wrong param");
+            data.put("message", "wrong param");
         }
         logger.warn("user {} shutdownInstance {}, result is {}", appUser.getName(), instanceId, result);
         if (result) {
-            model.addAttribute("success", SuccessEnum.SUCCESS.value());
+            data.put("success", SuccessEnum.SUCCESS.value());
         } else {
-            model.addAttribute("success", SuccessEnum.FAIL.value());
+            data.put("success", SuccessEnum.FAIL.value());
         }
-        return new ModelAndView();
+        return ResultGenerator.genSuccessResult(data);
     }
     
     /**
      * 查看redis节点日志
-     * @param appId
-     * @param slaveInstanceId
      */
     @RequestMapping("/log")
-    public ModelAndView doShowLog(HttpServletRequest request, HttpServletResponse response, Model model, int instanceId) {
+    public Result doShowLog(HttpServletRequest request, HttpServletResponse response, Model model, int instanceId) {
+        HashMap<String, Object> data = new HashMap<>(0);
         int pageSize = NumberUtils.toInt(request.getParameter("pageSize"), 0);
         if (pageSize == 0) {
             pageSize = 100;
         }
         String instanceLogStr = instanceDeployCenter.showInstanceRecentLog(instanceId, pageSize);
-        model.addAttribute("instanceLogList", StringUtils.isBlank(instanceLogStr) ? Collections.emptyList() : Arrays.asList(instanceLogStr.split("\n")));
-        return new ModelAndView("manage/instance/log");
+        data.put("instanceLogList", StringUtils.isBlank(instanceLogStr) ? Collections.emptyList() : Arrays.asList(instanceLogStr.split("\n")));
+        return ResultGenerator.genSuccessResult(data);
     }
     
     /**
@@ -131,28 +130,29 @@ public class InstanceManageController extends BaseController {
      * @param appAuditId 审批id
      */
     @RequestMapping(value = "/initInstanceConfigChange")
-    public ModelAndView doInitInstanceConfigChange(HttpServletRequest request,
+    public Result doInitInstanceConfigChange(HttpServletRequest request,
             HttpServletResponse response, Model model, Long appAuditId) {
+        HashMap<String, Object> data = new HashMap<>(0);
         // 申请原因
         AppAudit appAudit = appService.getAppAuditById(appAuditId);
-        model.addAttribute("appAudit", appAudit);
+        data.put("appAudit", appAudit);
 
         // 用第一个参数存实例id
         Long instanceId = NumberUtils.toLong(appAudit.getParam1());
         Map<String, String> redisConfigList = redisCenter.getRedisConfigList(instanceId.intValue());
-        model.addAttribute("redisConfigList", redisConfigList);
+        data.put("redisConfigList", redisConfigList);
 
         // 实例
         InstanceInfo instanceInfo = instanceStatsCenter.getInstanceInfo(instanceId);
-        model.addAttribute("instanceInfo", instanceInfo);
-        model.addAttribute("appId", appAudit.getAppId());
-        model.addAttribute("appAuditId", appAuditId);
+        data.put("instanceInfo", instanceInfo);
+        data.put("appId", appAudit.getAppId());
+        data.put("appAuditId", appAuditId);
 
         // 修改配置的键值对
-        model.addAttribute("instanceConfigKey", appAudit.getParam2());
-        model.addAttribute("instanceConfigValue", appAudit.getParam3());
+        data.put("instanceConfigKey", appAudit.getParam2());
+        data.put("instanceConfigValue", appAudit.getParam3());
 
-        return new ModelAndView("manage/appAudit/initInstanceConfigChange");
+        return ResultGenerator.genSuccessResult(data);
     }
 
     /**
@@ -166,7 +166,7 @@ public class InstanceManageController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/addInstanceConfigChange")
-    public ModelAndView doAddAppConfigChange(HttpServletRequest request,
+    public Result doAddAppConfigChange(HttpServletRequest request,
             HttpServletResponse response, Model model, Long appId, String host, int port,
             String instanceConfigKey, String instanceConfigValue, Long appAuditId) {
         AppUser appUser = getUserInfo(request);
@@ -177,10 +177,11 @@ public class InstanceManageController extends BaseController {
                 isModify = instanceDeployCenter.modifyInstanceConfig(appId, appAuditId, host, port, instanceConfigKey, instanceConfigValue);
             } catch (Exception e) {
                 logger.error(e.getMessage(), e);
+                return ResultGenerator.genFailResult(e.getMessage());
             }
         }
         logger.warn("user {} change instanceConfig:appId={},{}:{};key={};value={},appAuditId:{},result is:{}", appUser.getName(), appId, host, port, instanceConfigKey, instanceConfigValue, appAuditId, isModify);
-        return new ModelAndView("redirect:/manage/app/auditList");
+        return ResultGenerator.genSuccessResult();
     }
     
     

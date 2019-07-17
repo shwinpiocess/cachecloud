@@ -9,6 +9,8 @@ import com.sohu.cache.entity.MachineStats;
 import com.sohu.cache.machine.MachineDeployCenter;
 import com.sohu.cache.util.ConstUtils;
 import com.sohu.cache.util.TypeUtil;
+import com.sohu.cache.web.core.Result;
+import com.sohu.cache.web.core.ResultGenerator;
 import com.sohu.cache.web.enums.SuccessEnum;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -43,16 +45,17 @@ public class MachineManageController extends BaseController{
     private MachineDeployCenter machineDeployCenter;
 
     @RequestMapping(value = "/list")
-    public ModelAndView doMachineList(HttpServletRequest request,
+    public Result doMachineList(HttpServletRequest request,
                                 HttpServletResponse response, Model model, String ipLike) {
+        HashMap<String, Object> data = new HashMap<>(0);
         List<MachineStats> machineList = machineCenter.getMachineStats(ipLike);
         Map<String, Integer> machineInstanceCountMap = machineCenter.getMachineInstanceCountMap();
-        model.addAttribute("list", machineList);
-        model.addAttribute("ipLike", ipLike);
-        model.addAttribute("machineActive", SuccessEnum.SUCCESS.value());
-        model.addAttribute("collectAlert", "(请等待" + ConstUtils.MACHINE_STATS_CRON_MINUTE + "分钟)");
-        model.addAttribute("machineInstanceCountMap", machineInstanceCountMap);
-        return new ModelAndView("manage/machine/list");
+        data.put("list", machineList);
+        data.put("ipLike", ipLike);
+        data.put("machineActive", SuccessEnum.SUCCESS.value());
+        data.put("collectAlert", "(请等待" + ConstUtils.MACHINE_STATS_CRON_MINUTE + "分钟)");
+        data.put("machineInstanceCountMap", machineInstanceCountMap);
+        return ResultGenerator.genSuccessResult(data);
     }
     
     /**
@@ -61,8 +64,9 @@ public class MachineManageController extends BaseController{
      * @return
      */
     @RequestMapping(value = "/machineInstances")
-    public ModelAndView doMachineInstances(HttpServletRequest request,
+    public Result doMachineInstances(HttpServletRequest request,
                                 HttpServletResponse response, Model model, String ip) {
+        HashMap<String, Object> data = new HashMap<>(0);
         //机器以及机器下面的实例信息
         MachineInfo machineInfo = machineCenter.getMachineInfoByIp(ip);
         List<InstanceInfo> instanceList = machineCenter.getMachineInstanceInfo(ip);
@@ -70,9 +74,9 @@ public class MachineManageController extends BaseController{
         //统计信息
         fillInstanceModel(instanceList, instanceStatList, model);
         
-        model.addAttribute("machineInfo", machineInfo);
-        model.addAttribute("machineActive", SuccessEnum.SUCCESS.value());
-        return new ModelAndView("manage/machine/machineInstances");
+        data.put("machineInfo", machineInfo);
+        data.put("machineActive", SuccessEnum.SUCCESS.value());
+        return ResultGenerator.genSuccessResult(data);
     }
     
     /**
@@ -81,17 +85,19 @@ public class MachineManageController extends BaseController{
      * @return
      */
     @RequestMapping(value = "/checkMachineInstances")
-    public ModelAndView doCheckMachineInstances(HttpServletRequest request,
+    public Result doCheckMachineInstances(HttpServletRequest request,
                                 HttpServletResponse response, Model model, String ip) {
+        HashMap<String, Object> data = new HashMap<>(0);
         List<InstanceInfo> instanceList = machineCenter.getMachineInstanceInfo(ip);
-        model.addAttribute("machineHasInstance", CollectionUtils.isNotEmpty(instanceList));
-        return new ModelAndView("");
+        data.put("machineHasInstance", CollectionUtils.isNotEmpty(instanceList));
+        return ResultGenerator.genSuccessResult(data);
     }
     
 
     @RequestMapping(value = "/add", method = {RequestMethod.POST})
-    public ModelAndView doAdd(HttpServletRequest request,
+    public Result doAdd(HttpServletRequest request,
                               HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         MachineInfo machineInfo = new MachineInfo();
         machineInfo.setIp(request.getParameter("ip"));
         machineInfo.setRoom(request.getParameter("room"));
@@ -110,12 +116,12 @@ public class MachineManageController extends BaseController{
         machineInfo.setModifyTime(date);
         machineInfo.setAvailable(MachineInfoEnum.AvailableEnum.YES.getValue());
         boolean isSuccess = machineDeployCenter.addMachine(machineInfo);
-        model.addAttribute("result", isSuccess);
-        return new ModelAndView("");
+        data.put("result", isSuccess);
+        return ResultGenerator.genSuccessResult(data);
     }
     
     @RequestMapping(value = "/delete")
-    public ModelAndView doDelete(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result doDelete(HttpServletRequest request, HttpServletResponse response, Model model) {
         String machineIp = request.getParameter("machineIp");
         if (StringUtils.isNotBlank(machineIp)) {
             MachineInfo machineInfo = machineCenter.getMachineInfoByIp(machineIp);
@@ -124,13 +130,12 @@ public class MachineManageController extends BaseController{
         } else {
             logger.warn("machineIp is empty!");
         }
-        return new ModelAndView("redirect:/manage/machine/list");
+        return ResultGenerator.genSuccessResult();
     }
     
     
     /**
      * 实例统计信息
-     * @param appAudit
      * @param model
      */
     protected void fillInstanceModel(List<InstanceInfo> instanceList, List<InstanceStats> appInstanceStats, Model model) {

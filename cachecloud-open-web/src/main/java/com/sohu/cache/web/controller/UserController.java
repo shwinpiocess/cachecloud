@@ -4,6 +4,8 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.sohu.cache.web.core.Result;
+import com.sohu.cache.web.core.ResultGenerator;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -43,9 +45,9 @@ public class UserController extends BaseController{
      * 注册用户申请
      */
     @RequestMapping(value = "/apply")
-    public ModelAndView doAddUser(HttpServletRequest request,
-            HttpServletResponse response, Model model, String name, String chName, String email, String mobile,
-            Integer type, Long userId) {
+    public Result doAddUser(HttpServletRequest request,
+                            HttpServletResponse response, Model model, String name, String chName, String email, String mobile,
+                            Integer type, Long userId) {
         SuccessEnum success = SuccessEnum.SUCCESS;
         try {
             //保存用户(type=-1为无效用户,需要审批)
@@ -58,19 +60,22 @@ public class UserController extends BaseController{
             success = SuccessEnum.FAIL;
             logger.error(e.getMessage(), e);
         }
-        return new ModelAndView("redirect:/user/register?success=" + success.value());
+        if (success == SuccessEnum.SUCCESS) {
+            return ResultGenerator.genSuccessResult();
+        } else {
+            return ResultGenerator.genFailResult(String.valueOf(SuccessEnum.FAIL.value()));
+        }
     }
     
     
     @RequestMapping(value = "/checkUserNameExist")
-    public ModelAndView doCheckUserNameExist(HttpServletRequest request,
+    public Result doCheckUserNameExist(HttpServletRequest request,
             HttpServletResponse response, Model model, String userName) {
         AppUser appUser = userService.getByName(userName);
         if (appUser != null) {
-            write(response, String.valueOf(SuccessEnum.SUCCESS.value()));
+            return ResultGenerator.genSuccessResult();
         } else {
-            write(response, String.valueOf(SuccessEnum.FAIL.value()));
+            return ResultGenerator.genFailResult(String.valueOf(SuccessEnum.FAIL.value()));
         }
-        return null;
     }
 }

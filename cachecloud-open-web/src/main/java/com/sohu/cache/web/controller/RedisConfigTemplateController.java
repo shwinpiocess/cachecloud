@@ -1,12 +1,15 @@
 package com.sohu.cache.web.controller;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.sohu.cache.web.core.Result;
+import com.sohu.cache.web.core.ResultGenerator;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.springframework.stereotype.Controller;
@@ -44,21 +47,23 @@ public class RedisConfigTemplateController extends BaseController {
      * 初始化配置
      */
     @RequestMapping(value = "/init")
-    public ModelAndView init(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result init(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         // 默认是Redis普通节点配置
         int type = NumberUtils.toInt(request.getParameter("type"), ConstUtils.CACHE_REDIS_STANDALONE);
-        model.addAttribute("redisConfigList", redisConfigTemplateService.getByType(type));
-        model.addAttribute("success", request.getParameter("success"));
-        model.addAttribute("redisConfigActive", SuccessEnum.SUCCESS.value());
-        model.addAttribute("type", type);
-        return new ModelAndView("manage/redisConfig/init");
+        data.put("redisConfigList", redisConfigTemplateService.getByType(type));
+        data.put("success", request.getParameter("success"));
+        data.put("redisConfigActive", SuccessEnum.SUCCESS.value());
+        data.put("type", type);
+        return ResultGenerator.genSuccessResult(data);
     }
 
     /**
      * 修改配置
      */
     @RequestMapping(value = "/update")
-    public ModelAndView update(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result update(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         AppUser appUser = getUserInfo(request);
         String id = request.getParameter("id");
         String configKey = request.getParameter("configKey");
@@ -67,10 +72,10 @@ public class RedisConfigTemplateController extends BaseController {
         int status = NumberUtils.toInt(request.getParameter("status"), -1);
         if (StringUtils.isBlank(id) || !NumberUtils.isDigits(id) || StringUtils.isBlank(configKey) || status > 1
                 || status < 0) {
-            model.addAttribute("status", SuccessEnum.FAIL.value());
-            model.addAttribute("message", ErrorMessageEnum.PARAM_ERROR_MSG.getMessage() + "id=" + id + ",configKey="
+            data.put("status", SuccessEnum.FAIL.value());
+            data.put("message", ErrorMessageEnum.PARAM_ERROR_MSG.getMessage() + "id=" + id + ",configKey="
                     + configKey + ",configValue=" + configValue + ",status=" + status);
-            return new ModelAndView("");
+            return ResultGenerator.genSuccessResult(data);
         }
         //开始修改
         logger.warn("user {} want to change id={}'s configKey={}, configValue={}, info={}, status={}", appUser.getName(),
@@ -85,29 +90,30 @@ public class RedisConfigTemplateController extends BaseController {
             successEnum = SuccessEnum.SUCCESS;
         } catch (Exception e) {
             successEnum = SuccessEnum.FAIL;
-            model.addAttribute("message", ErrorMessageEnum.INNER_ERROR_MSG.getMessage());
+            data.put("message", ErrorMessageEnum.INNER_ERROR_MSG.getMessage());
             logger.error(e.getMessage(), e);
         }
         logger.warn("user {} want to change id={}'s configKey={}, configValue={}, info={}, status={}, result is {}", appUser.getName(),
                 id, configKey, configValue, info, status, successEnum.value());
         //发送邮件通知
         appEmailUtil.sendRedisConfigTemplateChangeEmail(appUser, instanceConfig, successEnum, RedisConfigTemplateChangeEnum.UPDATE);
-        model.addAttribute("status", successEnum.value());
-        return new ModelAndView("");
+        data.put("status", successEnum.value());
+        return ResultGenerator.genSuccessResult(data);
     }
 
     /**
      * 删除配置
      */
     @RequestMapping(value = "/remove")
-    public ModelAndView remove(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result remove(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         AppUser appUser = getUserInfo(request);
         String idParam = request.getParameter("id");
         long id = NumberUtils.toLong(idParam);
         if (id <= 0) {
-            model.addAttribute("status", SuccessEnum.FAIL.value());
-            model.addAttribute("message", ErrorMessageEnum.PARAM_ERROR_MSG.getMessage() + "id=" + idParam);
-            return new ModelAndView("");
+            data.put("status", SuccessEnum.FAIL.value());
+            data.put("message", ErrorMessageEnum.PARAM_ERROR_MSG.getMessage() + "id=" + idParam);
+            return ResultGenerator.genSuccessResult(data);
         }
         logger.warn("user {} want to delete id={}'s config", appUser.getName(), id);
         SuccessEnum successEnum;
@@ -117,14 +123,14 @@ public class RedisConfigTemplateController extends BaseController {
             successEnum = SuccessEnum.SUCCESS;
         } catch (Exception e) {
             successEnum = SuccessEnum.FAIL;
-            model.addAttribute("message", ErrorMessageEnum.INNER_ERROR_MSG.getMessage());
+            data.put("message", ErrorMessageEnum.INNER_ERROR_MSG.getMessage());
             logger.error(e.getMessage(), e);
         }
         logger.warn("user {} want to delete id={}'s config, result is {}", appUser.getName(), id, successEnum.value());
         //发送邮件通知
         appEmailUtil.sendRedisConfigTemplateChangeEmail(appUser, instanceConfig, successEnum, RedisConfigTemplateChangeEnum.DELETE);
-        model.addAttribute("status", successEnum.value());
-        return new ModelAndView("");
+        data.put("status", successEnum.value());
+        return ResultGenerator.genSuccessResult(data);
 
     }
 
@@ -132,13 +138,14 @@ public class RedisConfigTemplateController extends BaseController {
      * 添加配置
      */
     @RequestMapping(value = "/add")
-    public ModelAndView add(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result add(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         AppUser appUser = getUserInfo(request);
         InstanceConfig instanceConfig = getInstanceConfig(request);
         if (StringUtils.isBlank(instanceConfig.getConfigKey())) {
-            model.addAttribute("status", SuccessEnum.FAIL.value());
-            model.addAttribute("message", ErrorMessageEnum.PARAM_ERROR_MSG.getMessage() + "configKey=" + instanceConfig.getConfigKey());
-            return new ModelAndView("");
+            data.put("status", SuccessEnum.FAIL.value());
+            data.put("message", ErrorMessageEnum.PARAM_ERROR_MSG.getMessage() + "configKey=" + instanceConfig.getConfigKey());
+            return ResultGenerator.genSuccessResult(data);
         }
         logger.warn("user {} want to add config, configKey is {}, configValue is {}, type is {}", appUser.getName(),
                 instanceConfig.getConfigKey(), instanceConfig.getType());
@@ -148,16 +155,16 @@ public class RedisConfigTemplateController extends BaseController {
             successEnum = SuccessEnum.SUCCESS;
         } catch (Exception e) {
             successEnum = SuccessEnum.FAIL;
-            model.addAttribute("message", ErrorMessageEnum.INNER_ERROR_MSG.getMessage());
+            data.put("message", ErrorMessageEnum.INNER_ERROR_MSG.getMessage());
             logger.error(e.getMessage(), e);
         }
         logger.warn("user {} want to add config, configKey is {}, configValue is {}, type is {}, result is {}",
                 appUser.getName(),
                 instanceConfig.getConfigKey(), instanceConfig.getConfigValue(), instanceConfig.getType(), successEnum.value());
-        model.addAttribute("status", successEnum.value());
+        data.put("status", successEnum.value());
         //发送邮件通知
         appEmailUtil.sendRedisConfigTemplateChangeEmail(appUser, instanceConfig, successEnum, RedisConfigTemplateChangeEnum.ADD);
-        return new ModelAndView("");
+        return ResultGenerator.genSuccessResult(data);
 
     }
 
@@ -165,7 +172,8 @@ public class RedisConfigTemplateController extends BaseController {
      * 预览配置
      */
     @RequestMapping(value = "/preview")
-    public ModelAndView preview(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result preview(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         //默认配置
         int type = NumberUtils.toInt(request.getParameter("type"), -1);
         String host = StringUtils.isBlank(request.getParameter("host")) ? "127.0.0.1" : request.getParameter("host");
@@ -185,14 +193,14 @@ public class RedisConfigTemplateController extends BaseController {
         } else if (ConstUtils.CACHE_TYPE_REDIS_CLUSTER == type) {
             configList = redisConfigTemplateService.handleClusterConfig(port);
         }
-        model.addAttribute("type", type);
-        model.addAttribute("host", host);
-        model.addAttribute("port", port);
-        model.addAttribute("maxMemory", maxMemory);
-        model.addAttribute("sentinelPort", sentinelPort);
-        model.addAttribute("masterName", masterName);
-        model.addAttribute("configList", configList);
-        return new ModelAndView("manage/redisConfig/preview");
+        data.put("type", type);
+        data.put("host", host);
+        data.put("port", port);
+        data.put("maxMemory", maxMemory);
+        data.put("sentinelPort", sentinelPort);
+        data.put("masterName", masterName);
+        data.put("configList", configList);
+        return ResultGenerator.genSuccessResult(data);
     }
 
     /**

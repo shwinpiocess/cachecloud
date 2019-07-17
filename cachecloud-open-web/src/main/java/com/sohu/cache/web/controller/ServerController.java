@@ -3,17 +3,14 @@ package com.sohu.cache.web.controller;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.sohu.cache.web.core.Result;
+import com.sohu.cache.web.core.ResultGenerator;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.springframework.stereotype.Controller;
@@ -45,16 +42,17 @@ public class ServerController extends BaseController{
 	 * @return
 	 */
 	@RequestMapping("/index")
-	public ModelAndView index(HttpServletRequest request, HttpServletResponse response, Model model) {
+	public Result index(HttpServletRequest request, HttpServletResponse response, Model model) {
+		HashMap<String, Object> data = new HashMap<>(0);
 		String ip = request.getParameter("ip");
-		model.addAttribute("ip", ip);
+		data.put("ip", ip);
 		String date = request.getParameter("date");
 		if(date == null) {
 			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 			date = sdf.format(new Date());
 		}
-		model.addAttribute("date", date);
-        return new ModelAndView("server/index");
+		data.put("date", date);
+        return ResultGenerator.genSuccessResult(data);
 	}
 	/**
 	 * 服务器信息概览
@@ -64,13 +62,14 @@ public class ServerController extends BaseController{
 	 * @return
 	 */
 	@RequestMapping("/overview")
-	public ModelAndView overview(HttpServletRequest request, HttpServletResponse response, Model model) {
+	public Result overview(HttpServletRequest request, HttpServletResponse response, Model model) {
+		HashMap<String, Object> data = new HashMap<>(0);
         String ip = request.getParameter("ip");
         String date = request.getParameter("date");
         //获取服务器静态信息
         ServerInfo info = serverDataService.queryServerInfo(ip);
         if(info != null) {
-	        model.addAttribute("info", info);
+	        data.put("info", info);
 	        //解析ulimit
 	        String ulimit = info.getUlimit();
 			if(!StringUtils.isEmpty(ulimit)) {
@@ -79,13 +78,13 @@ public class ServerController extends BaseController{
 					String[] a = tmp[0].split(",");
 					if(a != null && a.length == 2) {
 						if("f".equals(a[0])) {
-							model.addAttribute("file", a[1]);
+							data.put("file", a[1]);
 						}
 					}
 					a = tmp[1].split(",");
 					if(a != null && a.length == 2) {
 						if("p".equals(a[0])) {
-							model.addAttribute("process", a[1]);
+							data.put("process", a[1]);
 						}
 					}
 				}
@@ -237,56 +236,56 @@ public class ServerController extends BaseController{
 			maxIops = getBigger(maxIops, ss.getDiops());
 		}
 		//x axis
-		model.addAttribute("xAxis", JSON.toJSONString(xAxis));
+		data.put("xAxis", JSON.toJSONString(xAxis));
 		//load
-		model.addAttribute("load1", JSON.toJSONString(load1Serie));
-		model.addAttribute("load5", JSON.toJSONString(load5Serie));
-		model.addAttribute("load15", JSON.toJSONString(load15Serie));
-		model.addAttribute("maxLoad1", maxLoad1);
-		model.addAttribute("avgLoad1", format(totalLoad1, list.size()));
+		data.put("load1", JSON.toJSONString(load1Serie));
+		data.put("load5", JSON.toJSONString(load5Serie));
+		data.put("load15", JSON.toJSONString(load15Serie));
+		data.put("maxLoad1", maxLoad1);
+		data.put("avgLoad1", format(totalLoad1, list.size()));
 		//cpu
-		model.addAttribute("user", JSON.toJSONString(userSerie));
-		model.addAttribute("sys", JSON.toJSONString(sysSerie));
-		model.addAttribute("wa", JSON.toJSONString(waSerie));
-		model.addAttribute("maxUser", maxUser);
-		model.addAttribute("maxSys", maxSys);
-		model.addAttribute("maxWa", maxWa);
+		data.put("user", JSON.toJSONString(userSerie));
+		data.put("sys", JSON.toJSONString(sysSerie));
+		data.put("wa", JSON.toJSONString(waSerie));
+		data.put("maxUser", maxUser);
+		data.put("maxSys", maxSys);
+		data.put("maxWa", maxWa);
 		//memory
-		model.addAttribute("mtotal", JSON.toJSONString(totalSerie));
-		model.addAttribute("muse", JSON.toJSONString(useSerie));
-		model.addAttribute("mcache", JSON.toJSONString(cacheSerie));
-		model.addAttribute("mbuffer", JSON.toJSONString(bufferSerie));
-		model.addAttribute("curFree", format(curFree, 1024));
-		model.addAttribute("maxUse", format(maxUse, 1024));
-		model.addAttribute("maxCache", format(maxCache, 1024));
-		model.addAttribute("maxBuffer", format(maxBuffer, 1024));
+		data.put("mtotal", JSON.toJSONString(totalSerie));
+		data.put("muse", JSON.toJSONString(useSerie));
+		data.put("mcache", JSON.toJSONString(cacheSerie));
+		data.put("mbuffer", JSON.toJSONString(bufferSerie));
+		data.put("curFree", format(curFree, 1024));
+		data.put("maxUse", format(maxUse, 1024));
+		data.put("maxCache", format(maxCache, 1024));
+		data.put("maxBuffer", format(maxBuffer, 1024));
 		//swap
-		model.addAttribute("mswap", JSON.toJSONString(swapSerie));
-		model.addAttribute("mswapUse", JSON.toJSONString(swapUseSerie));
-		model.addAttribute("maxSwap", maxSwapUse);
+		data.put("mswap", JSON.toJSONString(swapSerie));
+		data.put("mswapUse", JSON.toJSONString(swapUseSerie));
+		data.put("maxSwap", maxSwapUse);
 		//net
-		model.addAttribute("nin", JSON.toJSONString(netInSerie));
-		model.addAttribute("nout", JSON.toJSONString(netOutSerie));
-		model.addAttribute("maxNetIn", format(maxNetIn, 1024));
-		model.addAttribute("maxNetOut", format(maxNetOut, 1024));
+		data.put("nin", JSON.toJSONString(netInSerie));
+		data.put("nout", JSON.toJSONString(netOutSerie));
+		data.put("maxNetIn", format(maxNetIn, 1024));
+		data.put("maxNetOut", format(maxNetOut, 1024));
 		//tcp
-		model.addAttribute("testab", JSON.toJSONString(establishedSerie));
-		model.addAttribute("twait", JSON.toJSONString(twSerie));
-		model.addAttribute("torph", JSON.toJSONString(orphanSerie));
-		model.addAttribute("maxConn", maxConn);
-		model.addAttribute("maxWait", maxWait);
-		model.addAttribute("maxOrphan", maxOrphan);
+		data.put("testab", JSON.toJSONString(establishedSerie));
+		data.put("twait", JSON.toJSONString(twSerie));
+		data.put("torph", JSON.toJSONString(orphanSerie));
+		data.put("maxConn", maxConn);
+		data.put("maxWait", maxWait);
+		data.put("maxOrphan", maxOrphan);
 		//disk
-		model.addAttribute("dread", JSON.toJSONString(readSerie));
-		model.addAttribute("dwrite", JSON.toJSONString(writeSerie));
-		model.addAttribute("dbusy", JSON.toJSONString(busySerie));
-		model.addAttribute("diops", JSON.toJSONString(iopsSerie));
-		model.addAttribute("maxRead", format(maxRead, 1024));
-		model.addAttribute("maxWrite", format(maxWrite, 1024));
-		model.addAttribute("maxBusy", maxBusy);
-		model.addAttribute("maxIops", maxIops);
-        model.addAttribute("date", date);
-        return new ModelAndView("server/overview");
+		data.put("dread", JSON.toJSONString(readSerie));
+		data.put("dwrite", JSON.toJSONString(writeSerie));
+		data.put("dbusy", JSON.toJSONString(busySerie));
+		data.put("diops", JSON.toJSONString(iopsSerie));
+		data.put("maxRead", format(maxRead, 1024));
+		data.put("maxWrite", format(maxWrite, 1024));
+		data.put("maxBusy", maxBusy);
+		data.put("maxIops", maxIops);
+        data.put("date", date);
+        return ResultGenerator.genSuccessResult(data);
 	}
 	
 	private String format(double a, int b) {
@@ -327,7 +326,8 @@ public class ServerController extends BaseController{
 	 * @return
 	 */
 	@RequestMapping("/cpu")
-	public ModelAndView cpu(HttpServletRequest request, HttpServletResponse response, Model model) {
+	public Result cpu(HttpServletRequest request, HttpServletResponse response, Model model) {
+		HashMap<String, Object> data = new HashMap<>(0);
 		String ip = request.getParameter("ip");
         String date = request.getParameter("date");
         List<ServerStatus> list = serverDataService.queryServerCpu(ip, date);
@@ -363,9 +363,9 @@ public class ServerController extends BaseController{
 			}
         }
         //x axis
-		model.addAttribute("xAxis", JSON.toJSONString(xAxis));
-        model.addAttribute("cpu", subcpuMap.values());
-        return new ModelAndView("server/cpu");
+		data.put("xAxis", JSON.toJSONString(xAxis));
+        data.put("cpu", subcpuMap.values());
+        return ResultGenerator.genSuccessResult(data);
 	}
 	
 	/**
@@ -376,7 +376,8 @@ public class ServerController extends BaseController{
 	 * @return
 	 */
 	@RequestMapping("/net")
-	public ModelAndView net(HttpServletRequest request, HttpServletResponse response, Model model) {
+	public Result net(HttpServletRequest request, HttpServletResponse response, Model model) {
+		HashMap<String, Object> data = new HashMap<>(0);
 		String ip = request.getParameter("ip");
         String date = request.getParameter("date");
         List<ServerStatus> list = serverDataService.queryServerNet(ip, date);
@@ -389,9 +390,9 @@ public class ServerController extends BaseController{
         	addNetMap(ss.getNoutExt(), subnetMap, false);
         }
         //x axis
-		model.addAttribute("xAxis", JSON.toJSONString(xAxis));
-        model.addAttribute("net", subnetMap.values());
-        return new ModelAndView("server/net");
+		data.put("xAxis", JSON.toJSONString(xAxis));
+        data.put("net", subnetMap.values());
+        return ResultGenerator.genSuccessResult(data);
 	}
 	
 	/**
@@ -433,7 +434,8 @@ public class ServerController extends BaseController{
 	 * @return
 	 */
 	@RequestMapping("/disk")
-	public ModelAndView disk(HttpServletRequest request, HttpServletResponse response, Model model) {
+	public Result disk(HttpServletRequest request, HttpServletResponse response, Model model) {
+		HashMap<String, Object> data = new HashMap<>(0);
 		String ip = request.getParameter("ip");
         String date = request.getParameter("date");
         List<ServerStatus> list = serverDataService.queryServerDisk(ip, date);
@@ -472,13 +474,13 @@ public class ServerController extends BaseController{
 			addToChart(space, spaceChart);
         }
         //x axis
-		model.addAttribute("xAxis", JSON.toJSONString(xAxis));
-        model.addAttribute("read", readChart);
-        model.addAttribute("write", writeChart);
-        model.addAttribute("busy", busyChart);
-        model.addAttribute("iops", iopsChart);
-        model.addAttribute("space", spaceChart);
-        return new ModelAndView("server/disk");
+		data.put("xAxis", JSON.toJSONString(xAxis));
+        data.put("read", readChart);
+        data.put("write", writeChart);
+        data.put("busy", busyChart);
+        data.put("iops", iopsChart);
+        data.put("space", spaceChart);
+        return ResultGenerator.genSuccessResult(data);
 	}
 	
 	private void addToChart(String line, DiskChart chart) {

@@ -1,6 +1,7 @@
 package com.sohu.cache.web.controller;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import javax.annotation.Resource;
@@ -12,6 +13,8 @@ import com.sohu.cache.entity.*;
 import com.sohu.cache.machine.MachineCenter;
 import com.sohu.cache.stats.app.AppStatsCenter;
 import com.sohu.cache.stats.instance.InstanceStatsCenter;
+import com.sohu.cache.web.core.Result;
+import com.sohu.cache.web.core.ResultGenerator;
 import com.sohu.cache.web.vo.AppDetailVO;
 import org.apache.commons.lang.math.NumberUtils;
 import org.springframework.stereotype.Controller;
@@ -41,8 +44,9 @@ public class TotalManageController extends BaseController {
     private InstanceStatsCenter instanceStatsCenter;
 
     @RequestMapping(value = "/list")
-    public ModelAndView doTotalList(HttpServletRequest request,
-                                    HttpServletResponse response, Model model) {
+    public Result doTotalList(HttpServletRequest request,
+                              HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         AppUser currentUser = getUserInfo(request);
         List<AppDesc> apps = appService.getAppDescList(currentUser, new AppSearch());
         List<AppDetailVO> appDetailList = new ArrayList<AppDetailVO>();
@@ -80,22 +84,22 @@ public class TotalManageController extends BaseController {
             totalUseInstanceMem += instanceStat.getUsedMemory();
         }
 
-        model.addAttribute("totalApps", totalApps);
-        model.addAttribute("totalApplyMem", totalApplyMem);
-        model.addAttribute("totalUsedMem", totalUsedMem);
-        model.addAttribute("totalRunningApps", totalRunningApps);
+        data.put("totalApps", totalApps);
+        data.put("totalApplyMem", totalApplyMem);
+        data.put("totalUsedMem", totalUsedMem);
+        data.put("totalRunningApps", totalRunningApps);
 
-        model.addAttribute("totalMachineMem", totalMachineMem);
-        model.addAttribute("totalFreeMachineMem", totalFreeMachineMem);
+        data.put("totalMachineMem", totalMachineMem);
+        data.put("totalFreeMachineMem", totalFreeMachineMem);
 
-        model.addAttribute("totalInstanceMem", totalInstanceMem);
-        model.addAttribute("totalUseInstanceMem", totalUseInstanceMem);
+        data.put("totalInstanceMem", totalInstanceMem);
+        data.put("totalUseInstanceMem", totalUseInstanceMem);
 
-        model.addAttribute("apps", apps);
-        model.addAttribute("appDetailList", appDetailList);
-        model.addAttribute("list", apps);
-        model.addAttribute("totalActive", SuccessEnum.SUCCESS.value());
-        return new ModelAndView("manage/total/list");
+        data.put("apps", apps);
+        data.put("appDetailList", appDetailList);
+        data.put("list", apps);
+        data.put("totalActive", SuccessEnum.SUCCESS.value());
+        return ResultGenerator.genSuccessResult(data);
     }
 
 }

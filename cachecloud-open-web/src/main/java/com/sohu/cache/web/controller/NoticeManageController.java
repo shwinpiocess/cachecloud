@@ -2,12 +2,15 @@ package com.sohu.cache.web.controller;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.sohu.cache.web.core.Result;
+import com.sohu.cache.web.core.ResultGenerator;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -31,26 +34,31 @@ public class NoticeManageController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/initNotice")
-    public ModelAndView init(HttpServletRequest request,
-            HttpServletResponse response, Model model) {
-
+    public Result init(HttpServletRequest request,
+                       HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         String notice = "";
-        model.addAttribute("notice", notice);
-        model.addAttribute("success", request.getParameter("success"));
-        model.addAttribute("noticeActive", SuccessEnum.SUCCESS.value());
-        return new ModelAndView("manage/notice/initNotice");
+        data.put("notice", notice);
+        data.put("success", request.getParameter("success"));
+        data.put("noticeActive", SuccessEnum.SUCCESS.value());
+        return ResultGenerator.genSuccessResult(data);
     }
 
     /**
      * 发送邮件通知
      */
     @RequestMapping(value = "/add")
-    public ModelAndView addNotice(HttpServletRequest request,
+    public Result addNotice(HttpServletRequest request,
             HttpServletResponse response, Model model) {
+
         String notice = request.getParameter("notice");
         boolean result = appEmailUtil.noticeAllUser(notice);
-        model.addAttribute("success", result ? SuccessEnum.SUCCESS.value() : SuccessEnum.FAIL.value());
-        return new ModelAndView("");
+        SuccessEnum successEnum = result ? SuccessEnum.SUCCESS : SuccessEnum.FAIL;
+        if (successEnum == SuccessEnum.SUCCESS) {
+            return ResultGenerator.genSuccessResult();
+        } else {
+            return ResultGenerator.genFailResult(String.valueOf(SuccessEnum.FAIL.value()));
+        }
     }
 
     /**
@@ -59,19 +67,20 @@ public class NoticeManageController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/get")
-    public ModelAndView getNotice(HttpServletRequest request,
+    public Result getNotice(HttpServletRequest request,
             HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         String notice = "";
         List<String> list = null;
         if (StringUtils.isNotBlank(notice)) {
             list = Arrays.asList(notice.split(ConstUtils.NEXT_LINE));
-            model.addAttribute("status", SuccessEnum.SUCCESS.value());
+            data.put("status", SuccessEnum.SUCCESS.value());
         } else {
             list = new ArrayList<String>();
-            model.addAttribute("status", SuccessEnum.FAIL.value());
+            data.put("status", SuccessEnum.FAIL.value());
         }
-        model.addAttribute("data", list);
-        return new ModelAndView("");
+        data.put("data", list);
+        return ResultGenerator.genSuccessResult(data);
     }
 
 }

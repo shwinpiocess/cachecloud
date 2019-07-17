@@ -1,11 +1,14 @@
 package com.sohu.cache.web.controller;
 
+import java.util.HashMap;
 import java.util.List;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.sohu.cache.web.core.Result;
+import com.sohu.cache.web.core.ResultGenerator;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,11 +31,12 @@ public class FaultController extends BaseController {
 
     
     @RequestMapping(value = "/list")
-    public ModelAndView doUserList(HttpServletRequest request,
-            HttpServletResponse response, Model model) {
+    public Result doUserList(HttpServletRequest request,
+                             HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         List<InstanceFault> faults = memFaultService.getFaultList();
-        model.addAttribute("faults", faults);
-        return new ModelAndView("manage/fault/list");
+        data.put("faults", faults);
+        return ResultGenerator.genSuccessResult(data);
     }
 
 }

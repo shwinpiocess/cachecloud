@@ -1,11 +1,14 @@
 package com.sohu.cache.web.controller;
 
 import java.util.Date;
+import java.util.HashMap;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.sohu.cache.web.core.Result;
+import com.sohu.cache.web.core.ResultGenerator;
 import org.apache.commons.lang.math.NumberUtils;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -37,18 +40,20 @@ public class ImportAppController extends BaseController {
     }
 
     @RequestMapping(value = "/check")
-    public ModelAndView check(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result check(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         AppDesc appDesc = genAppDesc(request);
         String appInstanceInfo = request.getParameter("appInstanceInfo");
         ImportAppResult importAppResult = importAppCenter.check(appDesc, appInstanceInfo);
-        model.addAttribute("status", importAppResult.getStatus());
-        model.addAttribute("message", importAppResult.getMessage());
-        return new ModelAndView("");
+        data.put("status", importAppResult.getStatus());
+        data.put("message", importAppResult.getMessage());
+        return ResultGenerator.genSuccessResult(data);
     }
 
     @RequestMapping(value = "/add")
-    public ModelAndView add(HttpServletRequest request,
+    public Result add(HttpServletRequest request,
             HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         AppDesc appDesc = genAppDesc(request);
         String appInstanceInfo = request.getParameter("appInstanceInfo");
         logger.warn("appDesc:" + appDesc);
@@ -58,8 +63,8 @@ public class ImportAppController extends BaseController {
         boolean isSuccess = importAppCenter.importAppAndInstance(appDesc, appInstanceInfo);
         logger.warn("import app result is {}", isSuccess);
 
-        model.addAttribute("status", isSuccess ? 1 : 0);
-        return new ModelAndView("");
+        data.put("status", isSuccess ? 1 : 0);
+        return ResultGenerator.genSuccessResult(data);
     }
 
     /**

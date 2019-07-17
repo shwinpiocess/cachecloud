@@ -1,11 +1,14 @@
 package com.sohu.cache.web.controller;
 
+import java.util.HashMap;
 import java.util.List;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.sohu.cache.web.core.Result;
+import com.sohu.cache.web.core.ResultGenerator;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,14 +39,15 @@ public class UserManageController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/init")
-    public ModelAndView doUserInit(HttpServletRequest request,
-            HttpServletResponse response, Model model, Long id) {
+    public Result doUserInit(HttpServletRequest request,
+                             HttpServletResponse response, Model model, Long id) {
+        HashMap<String, Object> data = new HashMap<>(0);
         if (id != null) {
             AppUser user = userService.get(id);
-            model.addAttribute("user", user);
-            model.addAttribute("modify", true);
+            data.put("user", user);
+            data.put("modify", true);
         }
-        return new ModelAndView("manage/user/initUser");
+        return ResultGenerator.genSuccessResult(data);
     }
 
     /**
@@ -57,7 +61,7 @@ public class UserManageController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/add")
-    public ModelAndView doAddUser(HttpServletRequest request,
+    public Result doAddUser(HttpServletRequest request,
             HttpServletResponse response, Model model, String name, String chName, String email, String mobile,
             Integer type, Long userId) {
         // 后台暂时不对参数进行验证
@@ -68,12 +72,11 @@ public class UserManageController extends BaseController {
 			} else {
 			    userService.update(appUser);
 			}
-	        write(response, String.valueOf(SuccessEnum.SUCCESS.value()));
+	        return ResultGenerator.genSuccessResult();
 		} catch (Exception e) {
-		    write(response, String.valueOf(SuccessEnum.FAIL.value()));
 	        logger.error(e.getMessage(), e);
+            return ResultGenerator.genFailResult(String.valueOf(SuccessEnum.FAIL.value()));
 		}
-        return null;
     }
 
     /**
@@ -82,29 +85,29 @@ public class UserManageController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/delete")
-    public ModelAndView doDeleteUser(HttpServletRequest request,
+    public Result doDeleteUser(HttpServletRequest request,
             HttpServletResponse response, Model model, Long userId) {
         userService.delete(userId);
-        return new ModelAndView("redirect:/manage/user/list");
+        return ResultGenerator.genSuccessResult();
     }
 
     /**
      * 用户列表
-     * @param chName 中文名
      * @return
      */
     @RequestMapping(value = "/list")
-    public ModelAndView doUserList(HttpServletRequest request,
+    public Result doUserList(HttpServletRequest request,
             HttpServletResponse response, Model model, String searchChName) {
+        HashMap<String, Object> data = new HashMap<>(0);
         List<AppUser> users = userService.getUserList(searchChName);
-        model.addAttribute("users", users);
-        model.addAttribute("searchChName", searchChName);
-        model.addAttribute("userActive", SuccessEnum.SUCCESS.value());
-        return new ModelAndView("manage/user/list");
+        data.put("users", users);
+        data.put("searchChName", searchChName);
+        data.put("userActive", SuccessEnum.SUCCESS.value());
+        return ResultGenerator.genSuccessResult(data);
     }
     
     @RequestMapping(value = "/addAuditStatus")
-    public ModelAndView doAddAuditStatus(HttpServletRequest request,
+    public Result doAddAuditStatus(HttpServletRequest request,
             HttpServletResponse response, Model model, Integer status,
             Long appAuditId, String refuseReason) {
         AppAudit appAudit = appService.getAppAuditById(appAuditId);
@@ -130,11 +133,10 @@ public class UserManageController extends BaseController {
 
         // 批准成功直接跳转
         if (AppCheckEnum.APP_PASS.value().equals(status)) {
-            return new ModelAndView("redirect:/manage/app/auditList");
+            return ResultGenerator.genSuccessResult();
         }
 
-        write(response, String.valueOf(SuccessEnum.SUCCESS.value()));
-        return null;
+        return ResultGenerator.genSuccessResult();
     }
 
 }

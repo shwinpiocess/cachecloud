@@ -21,6 +21,8 @@ import com.sohu.cache.web.enums.LoginEnum;
 import com.sohu.cache.web.service.UserLoginStatusService;
 import com.sohu.cache.web.util.LoginUtil;
 
+import java.util.HashMap;
+
 /**
  * 登录逻辑
  *
@@ -45,6 +47,7 @@ public class LoginController extends BaseController {
     @RequestMapping(value = "/loginIn", method = RequestMethod.POST)
     public Result loginIn(HttpServletRequest request,
                           HttpServletResponse response, Model model, String userName, String password, boolean isAdmin) {
+        HashMap<String, Object> data = new HashMap<>(0);
         // 登录结果
         LoginResult loginResult = new LoginResult();
         loginResult.setAdminEnum((isAdmin == true ? AdminEnum.IS_ADMIN : AdminEnum.NOT_ADMIN));
@@ -82,9 +85,9 @@ public class LoginController extends BaseController {
         if (loginResult.getLoginEnum().equals(LoginEnum.LOGIN_SUCCESS)) {
             userLoginStatusService.addLoginStatus(request, response, userModel.getId().toString());
         }
-        model.addAttribute("success", loginResult.getLoginEnum().value());
-        model.addAttribute("admin", loginResult.getAdminEnum().value());
-        return ResultGenerator.genSuccessResult(loginResult);
+        data.put("success", loginResult.getLoginEnum().value());
+        data.put("admin", loginResult.getAdminEnum().value());
+        return ResultGenerator.genSuccessResult(data);
     }
 
     /**

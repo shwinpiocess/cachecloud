@@ -9,6 +9,8 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.sohu.cache.web.core.Result;
+import com.sohu.cache.web.core.ResultGenerator;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.stereotype.Controller;
@@ -48,12 +50,13 @@ public class ConfigManageController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/init")
-    public ModelAndView init(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result init(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         List<SystemConfig> configList = configService.getConfigList(1);
-        model.addAttribute("configList", configList);
-        model.addAttribute("success", request.getParameter("success"));
-        model.addAttribute("configActive", SuccessEnum.SUCCESS.value());
-        return new ModelAndView("manage/config/init");
+        data.put("configList", configList);
+        data.put("success", request.getParameter("success"));
+        data.put("configActive", SuccessEnum.SUCCESS.value());
+        return ResultGenerator.genSuccessResult(data);
     }
 
     /**
@@ -65,7 +68,7 @@ public class ConfigManageController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/update")
-    public ModelAndView update(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result update(HttpServletRequest request, HttpServletResponse response, Model model) {
         AppUser appUser = getUserInfo(request);
         logger.warn("user {} want to change config!", appUser.getName());
         List<SystemConfig> oldConfigList = configService.getConfigList(1);
@@ -94,7 +97,11 @@ public class ConfigManageController extends BaseController {
         Map<String, String> systemDifConfigMap = getDifConfigMap(oldConfigList, configMap);
         appEmailUtil.sendSystemConfigDifEmail(appUser, systemDifConfigMap, successEnum);
         logger.warn("user {} change config result is {}!", appUser.getName(), successEnum.value());
-        return new ModelAndView("redirect:/manage/config/init?success=" + successEnum.value());
+        if (successEnum == SuccessEnum.SUCCESS) {
+            return ResultGenerator.genSuccessResult();
+        } else {
+            return ResultGenerator.genFailResult(String.valueOf(SuccessEnum.FAIL.value()));
+        }
     }
 
     private Map<String, String> getDifConfigMap(List<SystemConfig> oldConfigList, Map<String, String> configMap) {
