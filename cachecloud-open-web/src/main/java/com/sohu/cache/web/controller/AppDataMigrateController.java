@@ -1,18 +1,14 @@
 package com.sohu.cache.web.controller;
 
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.sohu.cache.web.core.Result;
+import com.sohu.cache.web.core.ResultGenerator;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
@@ -77,10 +73,11 @@ public class AppDataMigrateController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/init")
-    public ModelAndView init(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result init(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         List<MachineInfo> machineInfoList = machineCenter.getMachineInfoByType(MachineInfoEnum.TypeEnum.REDIS_MIGRATE_TOOL);
-        model.addAttribute("machineInfoList", machineInfoList);
-        return new ModelAndView("migrate/init");
+        data.put("machineInfoList", machineInfoList);
+        return ResultGenerator.genSuccessResult(data);
     }
 
     /**
@@ -88,7 +85,8 @@ public class AppDataMigrateController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/check")
-    public ModelAndView check(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result check(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         //相关参数
         String migrateMachineIp = request.getParameter("migrateMachineIp");
         String sourceRedisMigrateIndex = request.getParameter("sourceRedisMigrateIndex");
@@ -102,9 +100,9 @@ public class AppDataMigrateController extends BaseController {
 
         //检查返回结果
         AppDataMigrateResult redisMigrateResult = appDataMigrateCenter.check(migrateMachineIp, sourceRedisMigrateEnum, sourceServers, targetRedisMigrateEnum, targetServers, redisSourcePass, redisTargetPass);
-        model.addAttribute("status", redisMigrateResult.getStatus());
-        model.addAttribute("message", redisMigrateResult.getMessage());
-        return new ModelAndView("");
+        data.put("status", redisMigrateResult.getStatus());
+        data.put("message", redisMigrateResult.getMessage());
+        return ResultGenerator.genSuccessResult(data);
     }
 
     /**
@@ -112,7 +110,8 @@ public class AppDataMigrateController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/start")
-    public ModelAndView start(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result start(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         //相关参数
         String migrateMachineIp = request.getParameter("migrateMachineIp");
         String sourceRedisMigrateIndex = request.getParameter("sourceRedisMigrateIndex");
@@ -133,8 +132,8 @@ public class AppDataMigrateController extends BaseController {
         boolean isSuccess = appDataMigrateCenter.migrate(migrateMachineIp, sourceRedisMigrateEnum, sourceServers,
                 targetRedisMigrateEnum, targetServers, sourceAppId, targetAppId, redisSourcePass, redisTargetPass, userId);
 
-        model.addAttribute("status", isSuccess ? 1 : 0);
-        return new ModelAndView("");
+        data.put("status", isSuccess ? 1 : 0);
+        return ResultGenerator.genSuccessResult(data);
     }
     
     /**
@@ -142,13 +141,14 @@ public class AppDataMigrateController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/stop")
-    public ModelAndView stop(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result stop(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         //任务id：查到任务相关信息
         long id = NumberUtils.toLong(request.getParameter("id"));
         AppDataMigrateResult stopMigrateResult = appDataMigrateCenter.stopMigrate(id);
-        model.addAttribute("status", stopMigrateResult.getStatus());
-        model.addAttribute("message", stopMigrateResult.getMessage());
-        return new ModelAndView("");
+        data.put("status", stopMigrateResult.getStatus());
+        data.put("message", stopMigrateResult.getMessage());
+        return ResultGenerator.genSuccessResult(data);
     }
     
     /**
@@ -156,7 +156,8 @@ public class AppDataMigrateController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/log")
-    public ModelAndView log(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result log(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         //任务id：查到任务相关信息
         long id = NumberUtils.toLong(request.getParameter("id"));
         int pageSize = NumberUtils.toInt(request.getParameter("pageSize"), 0);
@@ -165,8 +166,8 @@ public class AppDataMigrateController extends BaseController {
         }
         
         String log = appDataMigrateCenter.showDataMigrateLog(id, pageSize);
-        model.addAttribute("logList", Arrays.asList(log.split(ConstUtils.NEXT_LINE)));
-        return new ModelAndView("migrate/log");
+        data.put("logList", Arrays.asList(log.split(ConstUtils.NEXT_LINE)));
+        return ResultGenerator.genSuccessResult(data);
     }
     
     /**
@@ -174,12 +175,13 @@ public class AppDataMigrateController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/config")
-    public ModelAndView config(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result config(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         //任务id：查到任务相关信息
         long id = NumberUtils.toLong(request.getParameter("id"));
         String config = appDataMigrateCenter.showDataMigrateConf(id);
-        model.addAttribute("configList", Arrays.asList(config.split(ConstUtils.NEXT_LINE)));
-        return new ModelAndView("migrate/config");
+        data.put("configList", Arrays.asList(config.split(ConstUtils.NEXT_LINE)));
+        return ResultGenerator.genSuccessResult(data);
     }
     
     /**
@@ -187,11 +189,12 @@ public class AppDataMigrateController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/process")
-    public ModelAndView showProcess(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result showProcess(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         long id = NumberUtils.toLong(request.getParameter("id"));
         Map<RedisMigrateToolConstant, Map<String, Object>> migrateToolStatMap = appDataMigrateCenter.showMiragteToolProcess(id);
-        model.addAttribute("migrateToolStatMap", migrateToolStatMap);
-        return new ModelAndView("migrate/process");
+        data.put("migrateToolStatMap", migrateToolStatMap);
+        return ResultGenerator.genSuccessResult(data);
     }
     
     /**
@@ -199,7 +202,8 @@ public class AppDataMigrateController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/checkData")
-    public ModelAndView checkData(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result checkData(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         long id = NumberUtils.toLong(request.getParameter("id"));
         int nums = 1000 + new Random().nextInt(2000);
         //为了方便，直接传入命令
@@ -222,9 +226,9 @@ public class AppDataMigrateController extends BaseController {
             line = line.replace("[33m", "");
             checkDataResultList.add(line.trim());
         }
-        model.addAttribute("checkDataResultList", checkDataResultList);
-        model.addAttribute("checkDataCommand", commandResult.getCommand());
-        return new ModelAndView("migrate/checkData");
+        data.put("checkDataResultList", checkDataResultList);
+        data.put("checkDataCommand", commandResult.getCommand());
+        return ResultGenerator.genSuccessResult(data);
     }
 
     private boolean isUsefulLine(String line) {
@@ -241,11 +245,12 @@ public class AppDataMigrateController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/list")
-    public ModelAndView list(HttpServletRequest request, HttpServletResponse response, Model model, AppDataMigrateSearch appDataMigrateSearch) {
+    public Result list(HttpServletRequest request, HttpServletResponse response, Model model, AppDataMigrateSearch appDataMigrateSearch) {
+        HashMap<String, Object> data = new HashMap<>(0);
         List<AppDataMigrateStatus> appDataMigrateStatusList = appDataMigrateCenter.search(appDataMigrateSearch);
-        model.addAttribute("appDataMigrateStatusList", appDataMigrateStatusList);
-        model.addAttribute("appDataMigrateSearch", appDataMigrateSearch);
-        return new ModelAndView("migrate/list");
+        data.put("appDataMigrateStatusList", appDataMigrateStatusList);
+        data.put("appDataMigrateSearch", appDataMigrateSearch);
+        return ResultGenerator.genSuccessResult(data);
     }
     
     /**
@@ -253,7 +258,8 @@ public class AppDataMigrateController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/appInstanceList")
-    public ModelAndView appInstanceList(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result appInstanceList(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         String appIdStr = request.getParameter("appId");
         long appId = NumberUtils.toLong(appIdStr);
         AppDesc appDesc = appService.getByAppId(appId);
@@ -283,9 +289,9 @@ public class AppDataMigrateController extends BaseController {
                 }
             }
         }
-        model.addAttribute("instances", instances.toString());
-        model.addAttribute("appType", appDesc == null ? -1 : appDesc.getType());
-        return new ModelAndView("");
+        data.put("instances", instances.toString());
+        data.put("appType", appDesc == null ? -1 : appDesc.getType());
+        return ResultGenerator.genSuccessResult(data);
     }
     
 }

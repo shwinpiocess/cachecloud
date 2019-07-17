@@ -1,5 +1,7 @@
 package com.sohu.cache.web.controller;
 
+import com.sohu.cache.web.core.Result;
+import com.sohu.cache.web.core.ResultGenerator;
 import com.sohu.cache.web.enums.RedisOperateEnum;
 import com.sohu.cache.constant.AppCheckEnum;
 import com.sohu.cache.constant.ClusterOperateResult;
@@ -76,7 +78,8 @@ public class AppManageController extends BaseController {
 	private InstanceReshardProcessDao instanceReshardProcessDao;
 	
 	@RequestMapping("/appDaily")
-    public ModelAndView appDaily(HttpServletRequest request, HttpServletResponse response, Model model) throws ParseException {
+    public Result appDaily(HttpServletRequest request, HttpServletResponse response, Model model) throws ParseException {
+		HashMap<String, Object> data = new HashMap<>(0);
 	    AppUser userInfo = getUserInfo(request);
         logger.warn("user {} want to send appdaily", userInfo.getName());
         if (ConstUtils.SUPER_MANAGER.contains(userInfo.getName())) {
@@ -97,11 +100,11 @@ public class AppManageController extends BaseController {
             } else {
                 appDailyDataCenter.sendAppDailyEmail();
             }
-            model.addAttribute("msg", "success!");
+            data.put("msg", "success!");
         } else {
-            model.addAttribute("msg", "no power!");
+            data.put("msg", "no power!");
         }
-        return new ModelAndView("");
+        return ResultGenerator.genSuccessResult(data);
     }
 	
 	/**
@@ -111,17 +114,18 @@ public class AppManageController extends BaseController {
 	 * @param type 申请类型
 	 */
 	@RequestMapping(value = "/auditList")
-	public ModelAndView doAppAuditList(HttpServletRequest request,HttpServletResponse response, Model model,
+	public Result doAppAuditList(HttpServletRequest request,HttpServletResponse response, Model model,
 	        Integer status, Integer type) {
+		HashMap<String, Object> data = new HashMap<>(0);
 	    //获取审核列表
 		List<AppAudit> list = appService.getAppAudits(status, type);
 
-		model.addAttribute("list", list);
-		model.addAttribute("status", status);
-		model.addAttribute("type", type);
-		model.addAttribute("checkActive", SuccessEnum.SUCCESS.value());
+		data.put("list", list);
+		data.put("status", status);
+		data.put("type", type);
+		data.put("checkActive", SuccessEnum.SUCCESS.value());
 
-		return new ModelAndView("manage/appAudit/list");
+		return ResultGenerator.genSuccessResult(data);
 	}
 
 	/**
@@ -130,29 +134,30 @@ public class AppManageController extends BaseController {
 	 * @param appAuditId 审批id
 	 */
 	@RequestMapping(value = "/initAppConfigChange")
-	public ModelAndView doInitAppConfigChange(HttpServletRequest request,
+	public Result doInitAppConfigChange(HttpServletRequest request,
 			HttpServletResponse response, Model model, Long appAuditId) {
+		HashMap<String, Object> data = new HashMap<>(0);
 		// 申请原因
 		AppAudit appAudit = appService.getAppAuditById(appAuditId);
-		model.addAttribute("appAudit", appAudit);
+		data.put("appAudit", appAudit);
 
 		// 用第一个参数存实例id
 		Long instanceId = NumberUtils.toLong(appAudit.getParam1());
 		Map<String, String> redisConfigList = redisCenter.getRedisConfigList(instanceId.intValue());
-		model.addAttribute("redisConfigList", redisConfigList);
-		model.addAttribute("instanceId", instanceId);
+		data.put("redisConfigList", redisConfigList);
+		data.put("instanceId", instanceId);
 
 		// 实例列表
 		List<InstanceInfo> instanceList = appService.getAppInstanceInfo(appAudit.getAppId());
-		model.addAttribute("instanceList", instanceList);
-		model.addAttribute("appId", appAudit.getAppId());
-		model.addAttribute("appAuditId", appAuditId);
+		data.put("instanceList", instanceList);
+		data.put("appId", appAudit.getAppId());
+		data.put("appAuditId", appAuditId);
 
 		// 修改配置的键值对
-		model.addAttribute("appConfigKey", appAudit.getParam2());
-		model.addAttribute("appConfigValue", appAudit.getParam3());
+		data.put("appConfigKey", appAudit.getParam2());
+		data.put("appConfigValue", appAudit.getParam3());
 
-		return new ModelAndView("manage/appAudit/initAppConfigChange");
+		return ResultGenerator.genSuccessResult(data);
 	}
 
 	/**
@@ -164,9 +169,10 @@ public class AppManageController extends BaseController {
 	 * @param appAuditId 审批id
 	 */
 	@RequestMapping(value = "/addAppConfigChange")
-	public ModelAndView doAddAppConfigChange(HttpServletRequest request,
+	public Result doAddAppConfigChange(HttpServletRequest request,
 			HttpServletResponse response, Model model, Long appId,
 			String appConfigKey, String appConfigValue, Long appAuditId) {
+
 	    AppUser appUser = getUserInfo(request);
         logger.warn("user {} change appConfig:appId={};key={};value={},appAuditId:{}", appUser.getName(), appId, appConfigKey, appConfigValue, appAuditId);
         boolean isModify = false;
@@ -175,21 +181,23 @@ public class AppManageController extends BaseController {
 				isModify = appDeployCenter.modifyAppConfig(appId, appAuditId, appConfigKey, appConfigValue);
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);
+				return ResultGenerator.genFailResult(String.valueOf(SuccessEnum.FAIL.value()));
 			}
 		}
         logger.warn("user {} change appConfig:appId={};key={};value={},appAuditId:{},result is:{}", appUser.getName(), appId, appConfigKey, appConfigValue, appAuditId, isModify);
-		return new ModelAndView("redirect:/manage/app/auditList");
+		return ResultGenerator.genSuccessResult();
 	}
 
 	/**
 	 * 初始化水平扩容申请
 	 */
 	@RequestMapping(value = "/initHorizontalScaleApply")
-	public ModelAndView doInitHorizontalScaleApply(HttpServletRequest request, HttpServletResponse response, Model model, Long appAuditId) {
+	public Result doInitHorizontalScaleApply(HttpServletRequest request, HttpServletResponse response, Model model, Long appAuditId) {
+		HashMap<String, Object> data = new HashMap<>(0);
 		AppAudit appAudit = appService.getAppAuditById(appAuditId);
-		model.addAttribute("appAudit", appAudit);
-		model.addAttribute("appId", appAudit.getAppId());
-		return new ModelAndView("manage/appAudit/initHorizontalScaleApply");
+		data.put("appAudit", appAudit);
+		data.put("appId", appAudit.getAppId());
+		return ResultGenerator.genSuccessResult(data);
 	}
 	
 	
@@ -200,9 +208,10 @@ public class AppManageController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/addHorizontalNodes")
-    public ModelAndView doAddHorizontalNodes(HttpServletRequest request,
+    public Result doAddHorizontalNodes(HttpServletRequest request,
             HttpServletResponse response, Model model, String masterSizeSlave,
             Long appAuditId) {
+		HashMap<String, Object> data = new HashMap<>(0);
         AppUser appUser = getUserInfo(request);
         logger.warn("user {} addHorizontalNodes:{}", appUser.getName(), masterSizeSlave);
         boolean isAdd = false;
@@ -222,8 +231,8 @@ public class AppManageController extends BaseController {
             logger.error(e.getMessage(), e);
         }
         logger.warn("addAppClusterSharding:{}, result is {}", masterSizeSlave, isAdd);
-        model.addAttribute("status", isAdd ? 1 : 0);
-        return new ModelAndView("");
+        data.put("status", isAdd ? 1 : 0);
+        return ResultGenerator.genSuccessResult(data);
     }
 
     /**
@@ -233,9 +242,10 @@ public class AppManageController extends BaseController {
      * @return
      */
 	@RequestMapping(value = "/checkHorizontalNodes")
-	public ModelAndView doCheckHorizontalNodes(HttpServletRequest request,
+	public Result doCheckHorizontalNodes(HttpServletRequest request,
 			HttpServletResponse response, Model model, String masterSizeSlave,
 			Long appAuditId) {
+		HashMap<String, Object> data = new HashMap<>(0);
 	    DataFormatCheckResult dataFormatCheckResult = null;
         try {
             dataFormatCheckResult = appDeployCenter.checkHorizontalNodes(appAuditId, masterSizeSlave);
@@ -243,9 +253,9 @@ public class AppManageController extends BaseController {
             logger.error(e.getMessage(), e);
             dataFormatCheckResult = DataFormatCheckResult.fail(ErrorMessageEnum.INNER_ERROR_MSG.getMessage());
         }
-        model.addAttribute("status", dataFormatCheckResult.getStatus());
-        model.addAttribute("message", dataFormatCheckResult.getMessage());
-        return new ModelAndView("");
+        data.put("status", dataFormatCheckResult.getStatus());
+        data.put("message", dataFormatCheckResult.getMessage());
+        return ResultGenerator.genSuccessResult(data);
 	}
 
 	/**
@@ -254,23 +264,24 @@ public class AppManageController extends BaseController {
 	 * @param appAuditId
 	 */
 	@RequestMapping(value = "/handleHorizontalScale")
-	public ModelAndView doHandleHorizontalScale(HttpServletRequest request,
-			HttpServletResponse response, Model model, Long appAuditId) {
+	public Result doHandleHorizontalScale(HttpServletRequest request,
+												  HttpServletResponse response, Model model, Long appAuditId) {
+		HashMap<String, Object> data = new HashMap<>(0);
 		// 1. 审批
 		AppAudit appAudit = appService.getAppAuditById(appAuditId);
-		model.addAttribute("appAudit", appAudit);
-		model.addAttribute("appId", appAudit.getAppId());
+		data.put("appAudit", appAudit);
+		data.put("appId", appAudit.getAppId());
 
 		// 2. 进度
 		List<InstanceReshardProcess> instanceReshardProcessList = instanceReshardProcessDao.getByAuditId(appAudit.getId());
-		model.addAttribute("instanceReshardProcessList", instanceReshardProcessList);
+		data.put("instanceReshardProcessList", instanceReshardProcessList);
 
 		// 3. 实例列表和统计
 		fillAppInstanceStats(appAudit.getAppId(), model);
 		// 4. 实例所在机器信息
 		fillAppMachineStat(appAudit.getAppId(), model);
 
-		return new ModelAndView("manage/appAudit/handleHorizontalScale");
+		return ResultGenerator.genSuccessResult(data);
 	}
 
 	/**
@@ -317,13 +328,14 @@ public class AppManageController extends BaseController {
 	 * @return
 	 */
 	@RequestMapping(value = "/checkHorizontalScale")
-	public ModelAndView doCheckHorizontalScale(HttpServletRequest request, HttpServletResponse response, Model model,
+	public Result doCheckHorizontalScale(HttpServletRequest request, HttpServletResponse response, Model model,
 			long sourceId, long targetId, int startSlot, int endSlot, long appId, long appAuditId, int migrateType) {
+		HashMap<String, Object> data = new HashMap<>(0);
 		HorizontalResult horizontalResult = appDeployCenter.checkHorizontal(appId, appAuditId, sourceId, targetId,
 				startSlot, endSlot, migrateType);
-		model.addAttribute("status", horizontalResult.getStatus());
-		model.addAttribute("message", horizontalResult.getMessage());
-		return new ModelAndView("");
+		data.put("status", horizontalResult.getStatus());
+		data.put("message", horizontalResult.getMessage());
+		return ResultGenerator.genSuccessResult(data);
 	}
 	
 	/**
@@ -337,16 +349,17 @@ public class AppManageController extends BaseController {
 	 * @return
 	 */
 	@RequestMapping(value = "/startHorizontalScale")
-	public ModelAndView doStartHorizontalScale(HttpServletRequest request, HttpServletResponse response, Model model,
+	public Result doStartHorizontalScale(HttpServletRequest request, HttpServletResponse response, Model model,
 			long sourceId, long targetId, int startSlot, int endSlot, long appId, long appAuditId, int migrateType) {
+		HashMap<String, Object> data = new HashMap<>(0);
 		AppUser appUser = getUserInfo(request);
 		logger.warn("user {} horizontalScaleApply appId {} appAuditId {} sourceId {} targetId {} startSlot {} endSlot {}",
 				appUser.getName(), appId, appAuditId, sourceId, targetId, startSlot, endSlot);
 		HorizontalResult horizontalResult = appDeployCenter.startHorizontal(appId, appAuditId, sourceId, targetId,
 				startSlot, endSlot, migrateType);
-        model.addAttribute("status", horizontalResult.getStatus());
-		model.addAttribute("message", horizontalResult.getMessage());
-		return new ModelAndView("");
+        data.put("status", horizontalResult.getStatus());
+		data.put("message", horizontalResult.getMessage());
+		return ResultGenerator.genSuccessResult(data);
 	}
 	
 	/**
@@ -355,13 +368,14 @@ public class AppManageController extends BaseController {
 	 * @return
 	 */
     @RequestMapping(value = "/retryHorizontalScale")
-    public ModelAndView retryHorizontalScale(HttpServletRequest request, HttpServletResponse response, Model model, int instanceReshardProcessId) {
+    public Result retryHorizontalScale(HttpServletRequest request, HttpServletResponse response, Model model, int instanceReshardProcessId) {
+		HashMap<String, Object> data = new HashMap<>(0);
         AppUser appUser = getUserInfo(request);
         logger.warn("user {} retryHorizontalScale id {}", appUser.getName(), instanceReshardProcessId);
         HorizontalResult horizontalResult = appDeployCenter.retryHorizontal(instanceReshardProcessId);
-        model.addAttribute("status", horizontalResult.getStatus());
-        model.addAttribute("message", horizontalResult.getMessage());
-        return new ModelAndView("");
+        data.put("status", horizontalResult.getStatus());
+        data.put("message", horizontalResult.getMessage());
+        return ResultGenerator.genSuccessResult(data);
     }
 
 	/**
@@ -370,10 +384,11 @@ public class AppManageController extends BaseController {
 	 * @param appAuditId 审批id
 	 */
 	@RequestMapping(value = "/initAppScaleApply")
-	public ModelAndView doInitAppScaleApply(HttpServletRequest request, HttpServletResponse response, Model model, Long appAuditId) {
+	public Result doInitAppScaleApply(HttpServletRequest request, HttpServletResponse response, Model model, Long appAuditId) {
+		HashMap<String, Object> data = new HashMap<>(0);
 		// 申请原因
 		AppAudit appAudit = appService.getAppAuditById(appAuditId);
-		model.addAttribute("appAudit", appAudit);
+		data.put("appAudit", appAudit);
 
 		// 实例列表和统计
 		fillAppInstanceStats(appAudit.getAppId(), model);
@@ -382,11 +397,11 @@ public class AppManageController extends BaseController {
 
 		long appId = appAudit.getAppId();
 		AppDesc appDesc = appService.getByAppId(appId);
-        model.addAttribute("appAuditId", appAuditId);
-		model.addAttribute("appId", appAudit.getAppId());
-        model.addAttribute("appDesc", appDesc);
+        data.put("appAuditId", appAuditId);
+		data.put("appId", appAudit.getAppId());
+        data.put("appDesc", appDesc);
 		
-		return new ModelAndView("manage/appAudit/initAppScaleApply");
+		return ResultGenerator.genSuccessResult(data);
 	}
 
 	/**
@@ -396,7 +411,7 @@ public class AppManageController extends BaseController {
 	 * @param appAuditId 审批id
 	 */
 	@RequestMapping(value = "/addAppScaleApply")
-	public ModelAndView doAddAppScaleApply(HttpServletRequest request,
+	public Result doAddAppScaleApply(HttpServletRequest request,
 			HttpServletResponse response, Model model, String appScaleText,
 			Long appAuditId, Long appId) {
 	    AppUser appUser = getUserInfo(request);
@@ -413,7 +428,7 @@ public class AppManageController extends BaseController {
 			logger.error("appScaleApplay error param: appScaleText={},appAuditId:{}", appScaleText, appAuditId);
 		}
         logger.error("user {} appScaleApplay: appScaleText={},appAuditId:{}, result is {}", appUser.getName(), appScaleText, appAuditId, isSuccess);
-		return new ModelAndView("redirect:/manage/app/auditList");
+		return ResultGenerator.genSuccessResult();
 	}
 
 	/**
@@ -423,19 +438,20 @@ public class AppManageController extends BaseController {
 	 * @return
 	 */
 	@RequestMapping(value = "/initAppDeploy")
-	public ModelAndView doInitAppDeploy(HttpServletRequest request, HttpServletResponse response, Model model, Long appAuditId) {
+	public Result doInitAppDeploy(HttpServletRequest request, HttpServletResponse response, Model model, Long appAuditId) {
+		HashMap<String, Object> data = new HashMap<>(0);
 		// 申请原因
 		AppAudit appAudit = appService.getAppAuditById(appAuditId);
-		model.addAttribute("appAudit", appAudit);
+		data.put("appAudit", appAudit);
 
 		// 机器列表
 		List<MachineStats> machineList = machineCenter.getAllMachineStats();
-		model.addAttribute("machineList", machineList);
-		model.addAttribute("appAuditId", appAuditId);
-		model.addAttribute("appId", appAudit.getAppId());
-		model.addAttribute("appDesc", appService.getByAppId(appAudit.getAppId()));
+		data.put("machineList", machineList);
+		data.put("appAuditId", appAuditId);
+		data.put("appId", appAudit.getAppId());
+		data.put("appDesc", appService.getByAppId(appAudit.getAppId()));
 
-		return new ModelAndView("manage/appAudit/initAppDeploy");
+		return ResultGenerator.genSuccessResult(data);
 	}
 	
 	/**
@@ -443,8 +459,9 @@ public class AppManageController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/appDeployCheck")
-    public ModelAndView doAppDeployCheck(HttpServletRequest request, HttpServletResponse response, Model model, String appDeployText,
+    public Result doAppDeployCheck(HttpServletRequest request, HttpServletResponse response, Model model, String appDeployText,
             Long appAuditId) {
+		HashMap<String, Object> data = new HashMap<>(0);
         DataFormatCheckResult dataFormatCheckResult = null;
         try {
             dataFormatCheckResult = appDeployCenter.checkAppDeployDetail(appAuditId, appDeployText);
@@ -452,9 +469,9 @@ public class AppManageController extends BaseController {
             logger.error(e.getMessage(), e);
             dataFormatCheckResult = DataFormatCheckResult.fail(ErrorMessageEnum.INNER_ERROR_MSG.getMessage());
         }
-        model.addAttribute("status", dataFormatCheckResult.getStatus());
-        model.addAttribute("message", dataFormatCheckResult.getMessage());
-        return new ModelAndView("");
+        data.put("status", dataFormatCheckResult.getStatus());
+        data.put("message", dataFormatCheckResult.getMessage());
+        return ResultGenerator.genSuccessResult(data);
     }
 
 	/**
@@ -468,6 +485,7 @@ public class AppManageController extends BaseController {
 	public ModelAndView doAddAppDeploy(HttpServletRequest request,
 			HttpServletResponse response, Model model, String appDeployText,
 			Long appAuditId) {
+		HashMap<String, Object> data = new HashMap<>(0);
 	    AppUser appUser = getUserInfo(request);
         logger.warn("user {} appDeploy: appDeployText={},appAuditId:{}", appUser.getName(), appDeployText, appAuditId);
         boolean isSuccess = false;
@@ -479,7 +497,7 @@ public class AppManageController extends BaseController {
 			logger.error("appDeploy error param: appDeployText={},appAuditId:{}", appDeployText, appAuditId);
 		}
         logger.warn("user {} appDeploy: appDeployText={},appAuditId:{}, result is {}", appUser.getName(), appDeployText, appAuditId, isSuccess);
-        model.addAttribute("status", isSuccess ? 1 : 0);
+        data.put("status", isSuccess ? 1 : 0);
         return new ModelAndView("");
 	}
 
@@ -530,23 +548,24 @@ public class AppManageController extends BaseController {
 	@RequestMapping(value = "/offLine")
 	public ModelAndView offLineApp(HttpServletRequest request,
 			HttpServletResponse response, Model model, Long appId) {
+		HashMap<String, Object> data = new HashMap<>(0);
 		AppUser userInfo = getUserInfo(request);
 		logger.warn("user {} hope to offline appId: {}", userInfo.getName(), appId);
 		if (ConstUtils.SUPER_MANAGER.contains(userInfo.getName())) {
 			boolean result = appDeployCenter.offLineApp(appId);
-			model.addAttribute("appId", appId);
-			model.addAttribute("result", result);
+			data.put("appId", appId);
+			data.put("result", result);
 			if (result) {
-				model.addAttribute("msg", "操作成功");
+				data.put("msg", "操作成功");
 			} else {
-				model.addAttribute("msg", "操作失败");
+				data.put("msg", "操作失败");
 			}
 		    logger.warn("user {} offline appId: {}, result is {}", userInfo.getName(), appId, result);
 		    appEmailUtil.noticeOfflineApp(userInfo, appId, result);
 		} else {
 		    logger.warn("user {} hope to offline appId: {}, hasn't provilege", userInfo.getName(), appId);
-			model.addAttribute("result", false);
-			model.addAttribute("msg", "权限不足");
+			data.put("result", false);
+			data.put("msg", "权限不足");
 	        appEmailUtil.noticeOfflineApp(userInfo, appId, false);
 		}
 		return new ModelAndView();
@@ -585,9 +604,10 @@ public class AppManageController extends BaseController {
 	 * @param appId
 	 */
 	@RequestMapping("/index")
-	public ModelAndView index(HttpServletRequest request, HttpServletResponse response, Model model, Long appId) {
-		model.addAttribute("appId", appId);
-		return new ModelAndView("manage/appOps/appOpsIndex");
+	public Result index(HttpServletRequest request, HttpServletResponse response, Model model, Long appId) {
+		HashMap<String, Object> data = new HashMap<>(0);
+		data.put("appId", appId);
+		return ResultGenerator.genSuccessResult(data);
 	}
 
 	/**
@@ -595,14 +615,15 @@ public class AppManageController extends BaseController {
 	 * @param appId
 	 */
 	@RequestMapping("/machine")
-	public ModelAndView appMachine(HttpServletRequest request, HttpServletResponse response, Model model, Long appId) {
+	public Result appMachine(HttpServletRequest request, HttpServletResponse response, Model model, Long appId) {
+		HashMap<String, Object> data = new HashMap<>(0);
 		if (appId != null && appId > 0) {
 			List<MachineStats> appMachineList = appService.getAppMachineDetail(appId);
-			model.addAttribute("appMachineList", appMachineList);
+			data.put("appMachineList", appMachineList);
 			AppDesc appDesc = appService.getByAppId(appId);
-			model.addAttribute("appDesc", appDesc);
+			data.put("appDesc", appDesc);
 		}
-		return new ModelAndView("manage/appOps/appMachine");
+		return ResultGenerator.genSuccessResult(data);
 	}
 
 	/**
@@ -610,10 +631,11 @@ public class AppManageController extends BaseController {
 	 * @param appId
 	 */
 	@RequestMapping("/instance")
-	public ModelAndView appInstance(HttpServletRequest request, HttpServletResponse response, Model model, Long appId) {
+	public Result appInstance(HttpServletRequest request, HttpServletResponse response, Model model, Long appId) {
+		HashMap<String, Object> data = new HashMap<>(0);
 		if (appId != null && appId > 0) {
 			AppDesc appDesc = appService.getByAppId(appId);
-			model.addAttribute("appDesc", appDesc);
+			data.put("appDesc", appDesc);
 			//实例信息和统计
 			fillAppInstanceStats(appId, model);
 			
@@ -621,10 +643,10 @@ public class AppManageController extends BaseController {
             if (TypeUtil.isRedisCluster(appDesc.getType())) {
                 // 计算丢失的slot区间
                 Map<String,String> lossSlotsSegmentMap = redisCenter.getClusterLossSlots(appId);
-                model.addAttribute("lossSlotsSegmentMap", lossSlotsSegmentMap);
+                data.put("lossSlotsSegmentMap", lossSlotsSegmentMap);
             }
 		}
-		return new ModelAndView("manage/appOps/appInstance");
+		return ResultGenerator.genSuccessResult(data);
 	}
 
 	/**
@@ -632,14 +654,15 @@ public class AppManageController extends BaseController {
 	 * @param appId
 	 */
 	@RequestMapping("/detail")
-	public ModelAndView appInfoAndAudit(HttpServletRequest request, HttpServletResponse response, Model model, Long appId) {
+	public Result appInfoAndAudit(HttpServletRequest request, HttpServletResponse response, Model model, Long appId) {
+		HashMap<String, Object> data = new HashMap<>(0);
 		if (appId != null && appId > 0) {
 			List<AppAudit> appAuditList = appService.getAppAuditListByAppId(appId);
 			AppDesc appDesc = appService.getByAppId(appId);
-			model.addAttribute("appAuditList", appAuditList);
-			model.addAttribute("appDesc", appDesc);
+			data.put("appAuditList", appAuditList);
+			data.put("appDesc", appDesc);
 		}
-		return new ModelAndView("manage/appOps/appInfoAndAudit");
+		return ResultGenerator.genSuccessResult(data);
 	}
 	
 	/**
@@ -650,8 +673,9 @@ public class AppManageController extends BaseController {
      * @return
      */
     @RequestMapping("/clusterDelNode")
-    public ModelAndView clusterDelNode(HttpServletRequest request, HttpServletResponse response, Model model, Long appId,
+    public Result clusterDelNode(HttpServletRequest request, HttpServletResponse response, Model model, Long appId,
             int delNodeInstanceId) {
+		HashMap<String, Object> data = new HashMap<>(0);
         AppUser appUser = getUserInfo(request);
         logger.warn("user {}, clusterForget: appId:{}, instanceId:{}", appUser.getName(), appId, delNodeInstanceId);
         // 检测forget条件
@@ -662,9 +686,9 @@ public class AppManageController extends BaseController {
             logger.error(e.getMessage(), e);
         }
         if (checkClusterForgetResult == null || !checkClusterForgetResult.isSuccess()) {
-            model.addAttribute("success", checkClusterForgetResult.getStatus());
-            model.addAttribute("message", checkClusterForgetResult.getMessage());
-            return new ModelAndView("");
+            data.put("success", checkClusterForgetResult.getStatus());
+			data.put("message", checkClusterForgetResult.getMessage());
+            return ResultGenerator.genSuccessResult(data);
         }
         
         // 执行delnode:forget + shutdown
@@ -674,11 +698,11 @@ public class AppManageController extends BaseController {
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
         }
-        model.addAttribute("success", delNodeResult.getStatus());
-        model.addAttribute("message", delNodeResult.getMessage());
+        data.put("success", delNodeResult.getStatus());
+		data.put("message", delNodeResult.getMessage());
         logger.warn("user {}, clusterForget: appId:{}, instanceId:{}, result is {}", appUser.getName(), appId, delNodeInstanceId, delNodeResult.getStatus());
         
-        return new ModelAndView("");
+        return ResultGenerator.genSuccessResult(data);
         
     }
 
@@ -690,8 +714,9 @@ public class AppManageController extends BaseController {
 	 * @return
 	 */
 	@RequestMapping("/clusterSlaveFailOver")
-	public void clusterSlaveFailOver(HttpServletRequest request, HttpServletResponse response, Model model, Long appId,
+	public Result clusterSlaveFailOver(HttpServletRequest request, HttpServletResponse response, Model model, Long appId,
 			int slaveInstanceId) {
+		HashMap<String, Object> data = new HashMap<>(0);
 		boolean success = false;
 		String failoverParam = request.getParameter("failoverParam");
 		logger.warn("clusterSlaveFailOver: appId:{}, slaveInstanceId:{}, failoverParam:{}", appId, slaveInstanceId, failoverParam);
@@ -705,7 +730,12 @@ public class AppManageController extends BaseController {
 			logger.error("error param clusterSlaveFailOver: appId:{}, slaveInstanceId:{}, failoverParam:{}", appId, slaveInstanceId, failoverParam);
 		}
 	    logger.warn("clusterSlaveFailOver: appId:{}, slaveInstanceId:{}, failoverParam:{}, result is {}", appId, slaveInstanceId, failoverParam, success);
-		write(response, String.valueOf(success == true ? SuccessEnum.SUCCESS.value() : SuccessEnum.FAIL.value()));
+		SuccessEnum successEnum = success == true ? SuccessEnum.SUCCESS : SuccessEnum.FAIL;
+		if (successEnum == SuccessEnum.SUCCESS) {
+			return ResultGenerator.genSuccessResult();
+		} else {
+			return ResultGenerator.genFailResult(String.valueOf(SuccessEnum.FAIL.value()));
+		}
 	}
 
 	/**
@@ -717,8 +747,9 @@ public class AppManageController extends BaseController {
 	 * @return
 	 */
     @RequestMapping(value = "/addSlave")
-    public void addSlave(HttpServletRequest request, HttpServletResponse response, Model model, long appId,
+    public Result addSlave(HttpServletRequest request, HttpServletResponse response, Model model, long appId,
             int masterInstanceId, String slaveHost) {
+		HashMap<String, Object> data = new HashMap<>(0);
         AppUser appUser = getUserInfo(request);
         logger.warn("user {} addSlave: appId:{},masterInstanceId:{},slaveHost:{}", appUser.getName(), appId, masterInstanceId, slaveHost);
         boolean success = false;
@@ -730,7 +761,12 @@ public class AppManageController extends BaseController {
             }
         } 
         logger.warn("user {} addSlave: appId:{},masterInstanceId:{},slaveHost:{} result is {}", appUser.getName(), appId, masterInstanceId, slaveHost, success);
-        write(response, String.valueOf(success == true ? SuccessEnum.SUCCESS.value() : SuccessEnum.FAIL.value()));
+		SuccessEnum successEnum = success == true ? SuccessEnum.SUCCESS : SuccessEnum.FAIL;
+		if (successEnum == SuccessEnum.SUCCESS) {
+			return ResultGenerator.genSuccessResult();
+		} else {
+			return ResultGenerator.genFailResult(String.valueOf(SuccessEnum.FAIL.value()));
+		}
     }
 
     /**
@@ -740,7 +776,8 @@ public class AppManageController extends BaseController {
      * @return
      */
 	@RequestMapping(value = "/addSentinel")
-	public void addSentinel(HttpServletRequest request, HttpServletResponse response, Model model, long appId, String sentinelHost) {
+	public Result addSentinel(HttpServletRequest request, HttpServletResponse response, Model model, long appId, String sentinelHost) {
+		HashMap<String, Object> data = new HashMap<>(0);
         AppUser appUser = getUserInfo(request);
 		logger.warn("user {} addSentinel: appId:{}, sentinelHost:{}", appUser.getName(), appId, sentinelHost);
 	    boolean success = false;
@@ -752,16 +789,21 @@ public class AppManageController extends BaseController {
 			}
 		}
 	    logger.warn("user {} addSentinel: appId:{}, sentinelHost:{} result is {}", appUser.getName(), appId, sentinelHost, success);
-		write(response, String.valueOf(success == true ? SuccessEnum.SUCCESS.value() : SuccessEnum.FAIL.value()));
+		SuccessEnum successEnum = success == true ? SuccessEnum.SUCCESS : SuccessEnum.FAIL;
+		if (successEnum == SuccessEnum.SUCCESS) {
+			return ResultGenerator.genSuccessResult();
+		} else {
+			return ResultGenerator.genFailResult(String.valueOf(SuccessEnum.FAIL.value()));
+		}
 	}
 	
 	/**
 	 * 为失联的slot添加master节点
 	 * @param appId
-	 * @param sentinelHost
 	 */
 	@RequestMapping(value = "/addFailSlotsMaster")
     public void addFailSlotsMaster(HttpServletRequest request, HttpServletResponse response, Model model, long appId, String failSlotsMasterHost, int instanceId) {
+		HashMap<String, Object> data = new HashMap<>(0);
         AppUser appUser = getUserInfo(request);
         logger.warn("user {} addFailSlotsMaster: appId:{}, instanceId {}, newMasterHost:{}", appUser.getName(), appId, instanceId, failSlotsMasterHost);
         RedisOperateEnum redisOperateEnum = RedisOperateEnum.FAIL;
@@ -785,7 +827,8 @@ public class AppManageController extends BaseController {
 	 * @return
 	 */
     @RequestMapping("/sentinelFailOver")
-	public void sentinelFailOver(HttpServletRequest request, HttpServletResponse response, Model model, long appId) {
+	public Result sentinelFailOver(HttpServletRequest request, HttpServletResponse response, Model model, long appId) {
+		HashMap<String, Object> data = new HashMap<>(0);
         AppUser appUser = getUserInfo(request);
 		logger.warn("user {} sentinelFailOver, appId:{}", appUser.getName(), appId);
 	    boolean success = false;
@@ -799,14 +842,20 @@ public class AppManageController extends BaseController {
 			logger.error("error param, sentinelFailOver: appId:{}", appId);
 		}
 	    logger.warn("user {} sentinelFailOver, appId:{}, result is {}", appUser.getName(), appId, success);
-		write(response, String.valueOf(success == true ? SuccessEnum.SUCCESS.value() : SuccessEnum.FAIL.value()));
+		SuccessEnum successEnum = success == true ? SuccessEnum.SUCCESS : SuccessEnum.FAIL;
+		if (successEnum == SuccessEnum.SUCCESS) {
+			return ResultGenerator.genSuccessResult();
+		} else {
+			return ResultGenerator.genFailResult(String.valueOf(SuccessEnum.FAIL.value()));
+		}
 	}
     
     /**
      * 应用重要性级别
      */
     @RequestMapping(value = "/updateAppImportantLevel")
-    public ModelAndView doUpdateAppImportantLevel(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result doUpdateAppImportantLevel(HttpServletRequest request, HttpServletResponse response, Model model) {
+		HashMap<String, Object> data = new HashMap<>(0);
         long appId = NumberUtils.toLong(request.getParameter("appId"));
         int importantLevel = NumberUtils.toInt(request.getParameter("importantLevel"));
         SuccessEnum successEnum = SuccessEnum.FAIL;
@@ -820,15 +869,16 @@ public class AppManageController extends BaseController {
                 logger.error(e.getMessage(), e);
             }
         }
-        model.addAttribute("status", successEnum.value());
-        return new ModelAndView("");
+        data.put("status", successEnum.value());
+        return ResultGenerator.genSuccessResult(data);
     }
     
     /**
      * 更新应用密码
      */
     @RequestMapping(value = "/updateAppPassword")
-    public ModelAndView doUpdateAppPassword(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result doUpdateAppPassword(HttpServletRequest request, HttpServletResponse response, Model model) {
+		HashMap<String, Object> data = new HashMap<>(0);
         long appId = NumberUtils.toLong(request.getParameter("appId"));
         String password = request.getParameter("password");
         SuccessEnum successEnum = SuccessEnum.FAIL;
@@ -842,8 +892,8 @@ public class AppManageController extends BaseController {
                 logger.error(e.getMessage(), e);
             }
         }
-        model.addAttribute("status", successEnum.value());
-        return new ModelAndView("");
+        data.put("status", successEnum.value());
+        return ResultGenerator.genSuccessResult(data);
     }
 
 }
