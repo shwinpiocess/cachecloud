@@ -12,6 +12,8 @@ import com.sohu.cache.stats.app.AppStatsCenter;
 import com.sohu.cache.stats.instance.InstanceStatsCenter;
 import com.sohu.cache.util.ConstUtils;
 import com.sohu.cache.util.DemoCodeUtil;
+import com.sohu.cache.web.core.Result;
+import com.sohu.cache.web.core.ResultGenerator;
 import com.sohu.cache.web.vo.AppDetailVO;
 import com.sohu.cache.web.chart.model.HighchartPoint;
 import com.sohu.cache.web.chart.model.SimpleChartData;
@@ -361,7 +363,6 @@ public class AppController extends BaseController {
     /**
      * 多命令
      * @param appId
-     * @param statName
      * @return
      * @throws ParseException
      */
@@ -520,18 +521,18 @@ public class AppController extends BaseController {
     /**
      * 应用列表
      *
-     * @param userId
      * @return
      */
     @RequestMapping(value = "/list")
-    public ModelAndView doAppList(HttpServletRequest request,
-                                  HttpServletResponse response, Model model, AppSearch appSearch) {
+    public Result doAppList(HttpServletRequest request,
+                            HttpServletResponse response, Model model, AppSearch appSearch) {
+        HashMap<String, Object> data = new HashMap<>(0);
         // 1.获取该用户能够读取的应用列表,没有返回申请页面
         AppUser currentUser = getUserInfo(request);
-        model.addAttribute("currentUser", currentUser);
+        data.put("currentUser", currentUser);
         int userAppCount = appService.getUserAppCount(currentUser.getId());
         if (userAppCount == 0 && !AppUserTypeEnum.ADMIN_USER.value().equals(currentUser.getType())) {
-            return new ModelAndView("redirect:/admin/app/init");
+            return ResultGenerator.genSuccessResult();
         }
         // 默认只出运行中的
         if (appSearch.getAppStatus() == null) {
@@ -542,14 +543,14 @@ public class AppController extends BaseController {
         int pageNo = NumberUtils.toInt(request.getParameter("pageNo"), 1);
         int pageSize = NumberUtils.toInt(request.getParameter("pageSize"), 10);
         Page page = new Page(pageNo,pageSize, totalCount);
-        model.addAttribute("page", page);
+        data.put("page", page);
 
         // 2.2 查询指定时间客户端异常
         appSearch.setPage(page);
         List<AppDesc> apps = appService.getAppDescList(currentUser, appSearch);
         // 2.3 应用列表
         List<AppDetailVO> appDetailList = new ArrayList<AppDetailVO>();
-        model.addAttribute("appDetailList", appDetailList);
+        data.put("appDetailList", appDetailList);
 
         // 3. 全局统计
         long totalApplyMem = 0;
@@ -564,11 +565,11 @@ public class AppController extends BaseController {
                 totalApps++;
             }
         }
-        model.addAttribute("totalApps", totalApps);
-        model.addAttribute("totalApplyMem", totalApplyMem);
-        model.addAttribute("totalUsedMem", totalUsedMem);
+        data.put("totalApps", totalApps);
+        data.put("totalApplyMem", totalApplyMem);
+        data.put("totalUsedMem", totalUsedMem);
 
-        return new ModelAndView("app/appList");
+        return ResultGenerator.genSuccessResult(data);
     }
 
     /**
@@ -588,7 +589,7 @@ public class AppController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/add", method = RequestMethod.POST)
-    public ModelAndView doAppAdd(HttpServletRequest request,
+    public Result doAppAdd(HttpServletRequest request,
                                  HttpServletResponse response, Model model, AppDesc appDesc, String memSize) {
         AppUser appUser = getUserInfo(request);
         if (appDesc != null) {
@@ -599,7 +600,7 @@ public class AppController extends BaseController {
             appDesc.setStatus((short) AppStatusEnum.STATUS_ALLOCATED.getStatus());
             appDeployCenter.createApp(appDesc, appUser, memSize);
         }
-        return new ModelAndView("redirect:/admin/app/list");
+        return ResultGenerator.genSuccessResult();
     }
 
     /**
@@ -609,15 +610,14 @@ public class AppController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/checkAppNameExist")
-    public ModelAndView doCheckAppNameExist(HttpServletRequest request,
+    public Result doCheckAppNameExist(HttpServletRequest request,
                                             HttpServletResponse response, Model model, String appName) {
         AppDesc appDesc = appService.getAppByName(appName);
         if (appDesc != null) {
-            write(response, String.valueOf(SuccessEnum.SUCCESS.value()));
+            return ResultGenerator.genSuccessResult();
         } else {
-            write(response, String.valueOf(SuccessEnum.FAIL.value()));
+            return ResultGenerator.genFailResult(String.valueOf(SuccessEnum.FAIL.value()));
         }
-        return null;
     }
 
     /**
@@ -627,11 +627,12 @@ public class AppController extends BaseController {
      * @return
      */
     @RequestMapping("/command")
-    public ModelAndView command(HttpServletRequest request, HttpServletResponse response, Model model, Long appId) {
+    public Result command(HttpServletRequest request, HttpServletResponse response, Model model, Long appId) {
+        HashMap<String, Object> data = new HashMap<>(0);
         if (appId != null && appId > 0) {
-            model.addAttribute("appId", appId);
+            data.put("appId", appId);
         }
-        return new ModelAndView("app/appCommand");
+        return ResultGenerator.genSuccessResult(data);
     }
 
     /**
@@ -641,16 +642,17 @@ public class AppController extends BaseController {
      * @return
      */
     @RequestMapping("/commandExecute")
-    public ModelAndView commandExecute(HttpServletRequest request, HttpServletResponse response, Model model, Long appId) {
+    public Result commandExecute(HttpServletRequest request, HttpServletResponse response, Model model, Long appId) {
+        HashMap<String, Object> data = new HashMap<>(0);
         if (appId != null && appId > 0) {
-            model.addAttribute("appId", appId);
+            data.put("appId", appId);
             String command = request.getParameter("command");
             String result = appStatsCenter.executeCommand(appId, command);
-            model.addAttribute("result", result);
+            data.put("result", result);
         } else {
-            model.addAttribute("result", "error");
+            data.put("result", "error");
         }
-        return new ModelAndView("app/commandExecute");
+        return ResultGenerator.genSuccessResult(data);
     }
 
     /**
@@ -661,7 +663,7 @@ public class AppController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/deleteAppToUser")
-    public ModelAndView doDeleteAppToUser(HttpServletRequest request,
+    public Result doDeleteAppToUser(HttpServletRequest request,
                                           HttpServletResponse response, Model model, Long userId, Long appId) {
         if (userId != null && appId != null) {
             // 验证删除权限
@@ -675,11 +677,10 @@ public class AppController extends BaseController {
                 }
             }
             appService.deleteAppToUser(appId, userId);
-            write(response, String.valueOf(SuccessEnum.SUCCESS.value()));
+            return ResultGenerator.genSuccessResult();
         } else {
-            write(response, String.valueOf(SuccessEnum.FAIL.value()));
+            return ResultGenerator.genFailResult(String.valueOf(SuccessEnum.FAIL.value()));
         }
-        return null;
     }
     
     /**
@@ -693,7 +694,7 @@ public class AppController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/changeAppUserInfo")
-    public ModelAndView doAddUser(HttpServletRequest request,
+    public Result doAddUser(HttpServletRequest request,
             HttpServletResponse response, Model model, String name, String chName, String email, String mobile,
             Integer type, Long userId) {
         // 后台暂时不对参数进行验证
@@ -704,12 +705,11 @@ public class AppController extends BaseController {
             } else {
                 userService.update(appUser);
             }
-            write(response, String.valueOf(SuccessEnum.SUCCESS.value()));
+            return ResultGenerator.genSuccessResult();
         } catch (Exception e) {
-            write(response, String.valueOf(SuccessEnum.FAIL.value()));
             logger.error(e.getMessage(), e);
+            return ResultGenerator.genFailResult(String.valueOf(SuccessEnum.FAIL.value()));
         }
-        return null;
     }
     
 
@@ -722,14 +722,14 @@ public class AppController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/scale")
-    public ModelAndView doScaleApp(HttpServletRequest request,
+    public Result doScaleApp(HttpServletRequest request,
                                    HttpServletResponse response, Model model, Long appId, String applyMemSize, String appScaleReason) {
         AppUser appUser = getUserInfo(request);
         AppDesc appDesc = appService.getByAppId(appId);
         AppAudit appAudit = appService.saveAppScaleApply(appDesc, appUser, applyMemSize, appScaleReason, AppAuditType.APP_SCALE);
         appEmailUtil.noticeAppResult(appDesc, appAudit);
-        write(response, String.valueOf(SuccessEnum.SUCCESS.value()));
-        return null;
+
+        return ResultGenerator.genSuccessResult();
     }
 
     /**
@@ -741,33 +741,31 @@ public class AppController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/changeAppConfig")
-    public ModelAndView doChangeAppConfig(HttpServletRequest request,
+    public Result doChangeAppConfig(HttpServletRequest request,
                                           HttpServletResponse response, Model model, Long appId, Long instanceId, String appConfigKey, String appConfigValue, String appConfigReason) {
         AppUser appUser = getUserInfo(request);
         AppDesc appDesc = appService.getByAppId(appId);
         AppAudit appAudit = appService.saveAppChangeConfig(appDesc, appUser, instanceId, appConfigKey, appConfigValue,appConfigReason, AppAuditType.APP_MODIFY_CONFIG);
         appEmailUtil.noticeAppResult(appDesc, appAudit);
-        write(response, String.valueOf(SuccessEnum.SUCCESS.value()));
-        return null;
+
+        return ResultGenerator.genSuccessResult();
     }
     
     /**
      * 实例修改配置申请
      *
      * @param appId          应用id
-     * @param appConfigKey   配置项
-     * @param appConfigValue 配置值
      * @return
      */
     @RequestMapping(value = "/changeInstanceConfig")
-    public ModelAndView doChangeInstanceConfig(HttpServletRequest request,
+    public Result doChangeInstanceConfig(HttpServletRequest request,
                                           HttpServletResponse response, Model model, Long appId, Long instanceId, String instanceConfigKey, String instanceConfigValue, String instanceConfigReason) {
         AppUser appUser = getUserInfo(request);
         AppDesc appDesc = appService.getByAppId(appId);
         AppAudit appAudit = appService.saveInstanceChangeConfig(appDesc, appUser, instanceId, instanceConfigKey, instanceConfigValue, instanceConfigReason, AppAuditType.INSTANCE_MODIFY_CONFIG);
         appEmailUtil.noticeAppResult(appDesc, appAudit);
-        write(response, String.valueOf(SuccessEnum.SUCCESS.value()));
-        return null;
+
+        return ResultGenerator.genSuccessResult();
     }
 
     /**
@@ -778,40 +776,44 @@ public class AppController extends BaseController {
      * @return
      */
     @RequestMapping(value = "/addAppToUser")
-    public ModelAndView doAddAppToUser(HttpServletRequest request,
+    public Result doAddAppToUser(HttpServletRequest request,
                                        HttpServletResponse response, Model model, Long appId, String userName) {
         if (StringUtils.isNotBlank(userName)) {
             AppUser needAddAppUser = userService.getByName(userName);
             if (needAddAppUser != null) {
                 appService.saveAppToUser(appId, needAddAppUser.getId());
-                write(response, String.valueOf(SuccessEnum.SUCCESS.value()));
+                return ResultGenerator.genSuccessResult();
             } else {
-                write(response, String.valueOf(SuccessEnum.FAIL.value()));
+                return ResultGenerator.genFailResult(String.valueOf(SuccessEnum.FAIL.value()));
             }
         }
-        return null;
+        return ResultGenerator.genFailResult(String.valueOf(SuccessEnum.FAIL.value()));
     }
 
     /**
      * 修改应用报警配置
      */
     @RequestMapping(value = "/changeAppAlertConfig")
-    public ModelAndView doChangeAppAlertConfig(HttpServletRequest request,
+    public Result doChangeAppAlertConfig(HttpServletRequest request,
                                                HttpServletResponse response, Model model) {
 
         long appId = NumberUtils.toLong(request.getParameter("appId"), -1);
         int memAlertValue =  NumberUtils.toInt(request.getParameter("memAlertValue"), -1);
         int clientConnAlertValue =  NumberUtils.toInt(request.getParameter("clientConnAlertValue"), -1);
         SuccessEnum result = appService.changeAppAlertConfig(appId, memAlertValue,clientConnAlertValue, getUserInfo(request));
-        write(response, String.valueOf(result.value()));
-        return null;
+
+        if (result == SuccessEnum.SUCCESS) {
+            return ResultGenerator.genSuccessResult();
+        } else {
+            return ResultGenerator.genFailResult(String.valueOf(SuccessEnum.FAIL.value()));
+        }
     }
     
     /**
      * 修改应用信息
      */
     @RequestMapping(value = "/updateAppDetail")
-    public ModelAndView doUpdateAppDetail(HttpServletRequest request,
+    public Result doUpdateAppDetail(HttpServletRequest request,
                                                HttpServletResponse response, Model model) {
         long appId = NumberUtils.toLong(request.getParameter("appId"), 0);
         AppUser appUser = getUserInfo(request);
@@ -834,13 +836,17 @@ public class AppController extends BaseController {
                 successEnum = SuccessEnum.FAIL;
             }
         }
-        write(response, String.valueOf(successEnum.value()));
-        return null;
+        if (successEnum == SuccessEnum.SUCCESS) {
+            return ResultGenerator.genSuccessResult();
+        } else {
+            return ResultGenerator.genFailResult(String.valueOf(SuccessEnum.FAIL.value()));
+        }
     }
     
 
     @RequestMapping(value = "/demo")
-    public ModelAndView doDemo(HttpServletRequest request, HttpServletResponse response, Long appId, Model model) {
+    public Result doDemo(HttpServletRequest request, HttpServletResponse response, Long appId, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         if (appId != null && appId > 0) {
             AppDesc appDesc = appService.getByAppId(appId);
             List<String> code = DemoCodeUtil.getCode(appDesc.getType(), appDesc.getAppId());
@@ -849,27 +855,28 @@ public class AppController extends BaseController {
             String restApi = DemoCodeUtil.getRestAPI(appDesc.getType(), appDesc.getAppId());
             
             if(CollectionUtils.isNotEmpty(springConfig) && springConfig.size() > 0){
-                model.addAttribute("springConfig", springConfig);
+                data.put("springConfig", springConfig);
             }
-            model.addAttribute("dependency",dependency);
-            model.addAttribute("code", code);
-            model.addAttribute("status", 1);
-            model.addAttribute("restApi", restApi);
+            data.put("dependency",dependency);
+            data.put("code", code);
+            data.put("status", 1);
+            data.put("restApi", restApi);
         } else {
-            model.addAttribute("status", 0);
+            data.put("status", 0);
         }
-        return new ModelAndView("app/appDemo");
+        return ResultGenerator.genSuccessResult(data);
     }
 
     /**
      * 应用日报查询
      */
     @RequestMapping("/daily")
-    public ModelAndView appDaily(HttpServletRequest request,
+    public Result appDaily(HttpServletRequest request,
                                   HttpServletResponse response, Model model, Long appId) throws ParseException {
+        HashMap<String, Object> data = new HashMap<>(0);
         // 1. 应用信息
         AppDesc appDesc = appService.getByAppId(appId);
-        model.addAttribute("appDesc", appDesc);
+        data.put("appDesc", appDesc);
 
         // 2. 日期
         String dailyDateParam = request.getParameter("dailyDate");
@@ -879,13 +886,13 @@ public class AppController extends BaseController {
         } else {
             date = DateUtil.parseYYYY_MM_dd(dailyDateParam);
         }
-        model.addAttribute("dailyDate", dailyDateParam);
+        data.put("dailyDate", dailyDateParam);
 
         // 3. 日报
         AppDailyData appDailyData = appDailyDataCenter.getAppDailyData(appId, date);
-        model.addAttribute("appDailyData", appDailyData);
+        data.put("appDailyData", appDailyData);
 
-        return new ModelAndView("app/appDaily");
+        return ResultGenerator.genSuccessResult(data);
     }
 
     /**
@@ -895,11 +902,12 @@ public class AppController extends BaseController {
      * @throws ParseException 
      */
     @RequestMapping("/slowLog")
-    public ModelAndView appSlowLog(HttpServletRequest request,
+    public Result appSlowLog(HttpServletRequest request,
                                   HttpServletResponse response, Model model, Long appId) throws ParseException {
+        HashMap<String, Object> data = new HashMap<>(0);
         // 应用基本信息
         AppDesc appDesc = appService.getByAppId(appId);
-        model.addAttribute("appDesc", appDesc);
+        data.put("appDesc", appDesc);
         
         // 开始和结束日期
         TimeBetween timeBetween = getTimeBetween(request, model, "slowLogStartDate", "slowLogEndDate");
@@ -908,9 +916,9 @@ public class AppController extends BaseController {
         
         // 应用慢查询日志
         Map<String,Long> appInstanceSlowLogCountMap = appStatsCenter.getInstanceSlowLogCountMapByAppId(appId, startDate, endDate);
-        model.addAttribute("appInstanceSlowLogCountMap", appInstanceSlowLogCountMap);
+        data.put("appInstanceSlowLogCountMap", appInstanceSlowLogCountMap);
         List<InstanceSlowLog> appInstanceSlowLogList = appStatsCenter.getInstanceSlowLogByAppId(appId, startDate, endDate);
-        model.addAttribute("appInstanceSlowLogList", appInstanceSlowLogList);
+        data.put("appInstanceSlowLogList", appInstanceSlowLogList);
         
         // 各个实例对应的慢查询日志
         Map<String, List<InstanceSlowLog>> instaceSlowLogMap = new HashMap<String, List<InstanceSlowLog>>();
@@ -926,18 +934,18 @@ public class AppController extends BaseController {
                 instaceSlowLogMap.put(hostPort, list);
             }
         }
-        model.addAttribute("instaceSlowLogMap", instaceSlowLogMap);
-        model.addAttribute("instanceHostPortIdMap", instanceHostPortIdMap);
+        data.put("instaceSlowLogMap", instaceSlowLogMap);
+        data.put("instanceHostPortIdMap", instanceHostPortIdMap);
 
         
-        return new ModelAndView("app/slowLog");
+        return ResultGenerator.genSuccessResult(data);
     }
     
     /**
      * 清理应用数据
      */
     @RequestMapping(value = "/cleanAppData")
-    public ModelAndView doCleanAppData(HttpServletRequest request, HttpServletResponse response, Model model, long appId) {
+    public Result doCleanAppData(HttpServletRequest request, HttpServletResponse response, Model model, long appId) {
         AppUser appUser = getUserInfo(request);
         logger.warn("{} start to clean appId={} data!", appUser.getName(), appId);
         SuccessEnum successEnum = SuccessEnum.FAIL;
@@ -948,8 +956,11 @@ public class AppController extends BaseController {
             }
         }
         logger.warn("{} end to clean appId={} data, result is {}", appUser.getName(), appId, successEnum.info());
-        write(response, String.valueOf(successEnum.value()));
-        return null;
+        if (successEnum == SuccessEnum.SUCCESS) {
+            return ResultGenerator.genSuccessResult();
+        } else {
+            return ResultGenerator.genFailResult(String.valueOf(SuccessEnum.FAIL.value()));
+        }
     }
 
 
