@@ -13,6 +13,8 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.sohu.cache.web.core.Result;
+import com.sohu.cache.web.core.ResultGenerator;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
@@ -94,54 +96,55 @@ public class AppClientDataShowController extends BaseController {
     /**
      * 应用客户端统计首页
      * 
-     * @param appId 应用id
      */
     @RequestMapping("/index")
-    public ModelAndView doIndex(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result doIndex(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         Long appId = NumberUtils.toLong(request.getParameter("appId"));
         if (appId == null || appId <= 0) {
-            return new ModelAndView("");
+            return ResultGenerator.genSuccessResult(data);
         }
         AppDesc appDesc = appService.getByAppId(appId);
-        model.addAttribute("appId", appId);
-        model.addAttribute("appDesc", appDesc);
-        model.addAttribute("tabTag", request.getParameter("tabTag"));
-        model.addAttribute("type", request.getParameter("type"));
-        model.addAttribute("startDate", request.getParameter("startDate"));
-        model.addAttribute("endDate", request.getParameter("endDate"));
-        model.addAttribute("exceptionStartDate", request.getParameter("exceptionStartDate"));
-        model.addAttribute("exceptionEndDate", request.getParameter("exceptionEndDate"));
-        model.addAttribute("valueDistriStartDate", request.getParameter("valueDistriStartDate"));
-        model.addAttribute("valueDistriEndDate", request.getParameter("valueDistriEndDate"));
-        model.addAttribute("costDistriStartDate", request.getParameter("costDistriStartDate"));
-        model.addAttribute("costDistriEndDate", request.getParameter("costDistriEndDate"));
-        model.addAttribute("clientIp", request.getParameter("clientIp"));
-        model.addAttribute("pageNo", request.getParameter("pageNo"));
-        model.addAttribute("firstCommand", request.getParameter("firstCommand"));
-        model.addAttribute("timeDimensionality", request.getParameter("timeDimensionality"));
-        return new ModelAndView("client/appClientIndex");
+        data.put("appId", appId);
+        data.put("appDesc", appDesc);
+        data.put("tabTag", request.getParameter("tabTag"));
+        data.put("type", request.getParameter("type"));
+        data.put("startDate", request.getParameter("startDate"));
+        data.put("endDate", request.getParameter("endDate"));
+        data.put("exceptionStartDate", request.getParameter("exceptionStartDate"));
+        data.put("exceptionEndDate", request.getParameter("exceptionEndDate"));
+        data.put("valueDistriStartDate", request.getParameter("valueDistriStartDate"));
+        data.put("valueDistriEndDate", request.getParameter("valueDistriEndDate"));
+        data.put("costDistriStartDate", request.getParameter("costDistriStartDate"));
+        data.put("costDistriEndDate", request.getParameter("costDistriEndDate"));
+        data.put("clientIp", request.getParameter("clientIp"));
+        data.put("pageNo", request.getParameter("pageNo"));
+        data.put("firstCommand", request.getParameter("firstCommand"));
+        data.put("timeDimensionality", request.getParameter("timeDimensionality"));
+        return ResultGenerator.genSuccessResult(data);
     }
     
     /**
      * 客户端异常查询
      */
     @RequestMapping("/exception")
-    public ModelAndView doException(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result doException(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         // 1.1 应用信息
         Long appId = NumberUtils.toLong(request.getParameter("appId"));
         if (appId <= 0) {
-            return new ModelAndView("");
+            return ResultGenerator.genSuccessResult(data);
         }
         AppDesc appDesc = appService.getByAppId(appId);
-        model.addAttribute("appDesc", appDesc);
+        data.put("appDesc", appDesc);
 
         // 1.2 异常类型
         int type = NumberUtil.toInt(request.getParameter("type"));
-        model.addAttribute("type", type);
+        data.put("type", type);
 
         // 1.3 客户端ip
         String clientIp = request.getParameter("clientIp");
-        model.addAttribute("clientIp", clientIp);
+        data.put("clientIp", clientIp);
 
         // 1.4 日期格式转换
         TimeBetween timeBetween = new TimeBetween();
@@ -156,13 +159,13 @@ public class AppClientDataShowController extends BaseController {
         int pageNo = NumberUtils.toInt(request.getParameter("pageNo"), 1);
         int pageSize = NumberUtils.toInt(request.getParameter("pageSize"), 10);
         Page page = new Page(pageNo,pageSize, totalCount);
-        model.addAttribute("page", page);
+        data.put("page", page);
         
         List<AppClientExceptionStat> appClientExceptionList = clientReportExceptionService.getAppExceptionList(appId,
                 timeBetween.getStartTime(), timeBetween.getEndTime(), type, clientIp, page);
-        model.addAttribute("appClientExceptionList", appClientExceptionList);
+        data.put("appClientExceptionList", appClientExceptionList);
 
-        return new ModelAndView("client/clientException");
+        return ResultGenerator.genSuccessResult(data);
     }
     
     /**
@@ -202,15 +205,16 @@ public class AppClientDataShowController extends BaseController {
      * 应用客户端耗时统计
      */
     @RequestMapping("/costDistribute")
-    public ModelAndView doCostDistribute(HttpServletRequest request, HttpServletResponse response, Model model) {
+    public Result doCostDistribute(HttpServletRequest request, HttpServletResponse response, Model model) {
+        HashMap<String, Object> data = new HashMap<>(0);
         // 1.应用信息
         Long appId = NumberUtils.toLong(request.getParameter("appId"));
         if (appId <= 0) {
-            return new ModelAndView("");
+            ResultGenerator.genSuccessResult(data);
         }
         AppDesc appDesc = appService.getByAppId(appId);
-        model.addAttribute("appDesc", appDesc);
-        model.addAttribute("appId", appId);
+        data.put("appDesc", appDesc);
+        data.put("appId", appId);
 
         // 2.获取时间区间
         TimeBetween timeBetween = new TimeBetween();
@@ -225,18 +229,18 @@ public class AppClientDataShowController extends BaseController {
         
         // 3.所有命令和第一个命令
         List<String> allCommands = clientReportCostDistriService.getAppDistinctCommand(appId, startTime, endTime);
-        model.addAttribute("allCommands", allCommands);
+        data.put("allCommands", allCommands);
         
         // 4.所有客户端和实例对应关系
         List<AppInstanceClientRelation> appInstanceClientRelationList = appInstanceClientRelationService.getAppInstanceClientRelationList(appId, startDate);
-        model.addAttribute("appInstanceClientRelationList", appInstanceClientRelationList);
+        data.put("appInstanceClientRelationList", appInstanceClientRelationList);
         
         String firstCommand = request.getParameter("firstCommand");
         if (StringUtils.isBlank(firstCommand) && CollectionUtils.isNotEmpty(allCommands)) {
             firstCommand = allCommands.get(0);
-            model.addAttribute("firstCommand", firstCommand);
+            data.put("firstCommand", firstCommand);
         } else {
-            model.addAttribute("firstCommand", firstCommand);
+            data.put("firstCommand", firstCommand);
         }
         
         // 5.1 应用下客户端和实例的全局耗时统计列表
@@ -260,9 +264,9 @@ public class AppClientDataShowController extends BaseController {
         }
         
         resultMap.put("app", app);
-        model.addAttribute("appChartStatListJson", JSONObject.toJSONString(resultMap));
+        data.put("appChartStatListJson", JSONObject.toJSONString(resultMap));
         
-        return new ModelAndView("client/clientCostDistribute");
+        return ResultGenerator.genSuccessResult(data);
     }
     
     /**
@@ -302,7 +306,6 @@ public class AppClientDataShowController extends BaseController {
 
     /**
      * 获取指定时间内某个命令某个客户端和实例的统计数据
-     * @param appId
      */
     @RequestMapping("/getAppClientInstanceCommandCost")
     public ModelAndView doGetAppClientInstanceCommandCost(HttpServletRequest request, HttpServletResponse response, Model model) throws ParseException {
@@ -346,15 +349,16 @@ public class AppClientDataShowController extends BaseController {
      * 应用客户端值分布相关
      */
     @RequestMapping("/valueDistribute")
-    public ModelAndView doValueDistribute(HttpServletRequest request, HttpServletResponse response, Model model)
+    public Result doValueDistribute(HttpServletRequest request, HttpServletResponse response, Model model)
             throws ParseException {
+        HashMap<String, Object> data = new HashMap<>(0);
         // 1.1 应用信息
         Long appId = NumberUtils.toLong(request.getParameter("appId"));
         if (appId <= 0) {
-            return new ModelAndView("");
+            ResultGenerator.genSuccessResult(data);
         }
         AppDesc appDesc = appService.getByAppId(appId);
-        model.addAttribute("appDesc", appDesc);
+        data.put("appDesc", appDesc);
 
         // 1.2 时间格式转换
         TimeBetween timeBetween = new TimeBetween();
@@ -368,12 +372,12 @@ public class AppClientDataShowController extends BaseController {
         
         //值分布列表
         List<AppClientValueDistriSimple> appClientValueDistriSimpleList = clientReportValueDistriService.getAppValueDistriList(appId, startTime, endTime);
-        model.addAttribute("appClientValueDistriSimpleList", appClientValueDistriSimpleList);
+        data.put("appClientValueDistriSimpleList", appClientValueDistriSimpleList);
         
         //值分布json
-        model.addAttribute("appClientValueDistriSimpleListJson", JSONObject.toJSONString(appClientValueDistriSimpleList));
+        data.put("appClientValueDistriSimpleListJson", JSONObject.toJSONString(appClientValueDistriSimpleList));
         
-        return new ModelAndView("client/clientValueDistribute");
+        return ResultGenerator.genSuccessResult(data);
     }
     
     /**
