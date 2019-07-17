@@ -3,6 +3,10 @@ package com.sohu.cache.interceptor;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.alibaba.fastjson.JSON;
+import com.sohu.cache.web.core.Result;
+import com.sohu.cache.web.core.ResultCode;
+import com.sohu.cache.web.core.ResultGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.servlet.ModelAndView;
@@ -12,6 +16,8 @@ import com.sohu.cache.entity.AppUser;
 import com.sohu.cache.util.ConstUtils;
 import com.sohu.cache.web.service.UserLoginStatusService;
 import com.sohu.cache.web.service.UserService;
+
+import java.io.IOException;
 
 /**
  * 前台登陆验证
@@ -34,8 +40,9 @@ public class FrontUserLoginInterceptor extends HandlerInterceptorAdapter {
         AppUser user = userService.get(userId);
         
         if (user == null) {
-            String redirectUrl = LoginInterceptorUtil.getLoginRedirectUrl(request);
-            response.sendRedirect(redirectUrl);
+            Result result = new Result();
+            result.setCode(ResultCode.UNAUTHORIZED).setMessage("签名认证失败");
+            responseResult(response, result);
             return false;
         }
         
@@ -43,6 +50,17 @@ public class FrontUserLoginInterceptor extends HandlerInterceptorAdapter {
         request.setAttribute("uri", request.getRequestURI());
         
         return true;
+    }
+
+    private void responseResult(HttpServletResponse response, Result result) {
+        response.setCharacterEncoding("UTF-8");
+        response.setHeader("Content-type", "application/json;charset=UTF-8");
+        response.setStatus(200);
+        try {
+            response.getWriter().write(JSON.toJSONString(result));
+        } catch (IOException ex) {
+            logger.error(ex.getMessage());
+        }
     }
 
     @Override
